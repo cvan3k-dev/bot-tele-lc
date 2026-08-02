@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 # ═══════════════════════════════════════════════════════════════
-#   VAN HOA AI BOT - ALL IN ONE
+#   VAN HOA AI BOT - ALL IN ONE (NO REDIS)
 #   CRE: HQuanz VIP
-#   CHỈ 1 FILE DUY NHẤT - COPY PASTE LÀ CHẠY
+#   Dùng file JSON để lưu dữ liệu
 # ═══════════════════════════════════════════════════════════════
 
 import os, sys, json, time, uuid, threading, ssl, urllib.request
@@ -15,63 +15,54 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.constants import ParseMode
 from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, MessageHandler, filters, ContextTypes
 
-# ─── REDIS ──────────────────────────────────────────────────────
-import redis
-
 # ════════════════════════════════════════════════════════════════
 #  CONFIG - ĐỔI Ở ĐÂY
 # ════════════════════════════════════════════════════════════════
 BOT_TOKEN   = "8774993011:AAHM3uCpCqlaOTRdOIL1mDU-JGDkdLT78sA"
 ADMIN_IDS   = [5888859004]
 API_URL     = "https://wtxmd52.tele68.com/v1/txmd5/sessions"
-REDIS_URL   = os.getenv("REDIS_URL", "redis://localhost:6379")
-SYNC_SEC    = 8
+SYNC_SEC    = 6
 TAI, XIU    = "T", "X"
+DATA_FILE   = "vanhoa_data.json"
 
 # ════════════════════════════════════════════════════════════════
-#  REDIS DATABASE
+#  FILE DATABASE (KHÔNG CẦN REDIS)
 # ════════════════════════════════════════════════════════════════
 class DB:
     def __init__(self):
+        self._data = self._load()
+    
+    def _load(self):
+        if os.path.exists(DATA_FILE):
+            try:
+                with open(DATA_FILE, "r", encoding="utf-8") as f:
+                    return json.load(f)
+            except:
+                pass
+        return {"keys": {}, "users": {}, "stats": {"total": 0, "win": 0, "loss": 0, "streak": 0, "best": 0}}
+    
+    def _save(self):
         try:
-            self.r = redis.Redis.from_url(REDIS_URL, decode_responses=True)
-            self.r.ping()
-            print("✅ Redis kết nối thành công")
+            with open(DATA_FILE, "w", encoding="utf-8") as f:
+                json.dump(self._data, f, indent=2, ensure_ascii=False)
         except:
-            print("⚠️ Redis lỗi, dùng RAM tạm")
-            self.r = None
-            self._data = {"keys": {}, "users": {}, "stats": {"total": 0, "win": 0, "loss": 0, "streak": 0, "best": 0}}
+            pass
     
-    def _get(self):
-        if self.r:
-            d = self.r.get("vanhoa:data")
-            return json.loads(d) if d else {"keys": {}, "users": {}, "stats": {"total": 0, "win": 0, "loss": 0, "streak": 0, "best": 0}}
-        return self._data
-    
-    def _set(self, d):
-        if self.r:
-            self.r.set("vanhoa:data", json.dumps(d, ensure_ascii=False))
-        else:
-            self._data = d
-    
-    def get_keys(self): return self._get().get("keys", {})
-    def get_users(self): return self._get().get("users", {})
-    def get_stats(self): return self._get().get("stats", {"total": 0, "win": 0, "loss": 0, "streak": 0, "best": 0})
+    def get_keys(self): return self._data.get("keys", {})
+    def get_users(self): return self._data.get("users", {})
+    def get_stats(self): return self._data.get("stats", {"total": 0, "win": 0, "loss": 0, "streak": 0, "best": 0})
     
     def save_key(self, k, v):
-        d = self._get()
-        d["keys"][k] = v
-        self._set(d)
+        self._data["keys"][k] = v
+        self._save()
     
     def save_user(self, uid, v):
-        d = self._get()
-        d["users"][str(uid)] = v
-        self._set(d)
+        self._data["users"][str(uid)] = v
+        self._save()
     
     def save_stats(self, s):
-        d = self._get()
-        d["stats"] = s
-        self._set(d)
+        self._data["stats"] = s
+        self._save()
 
 db = DB()
 
@@ -623,7 +614,7 @@ async def msg(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
 def main():
     print("═"*40)
     print("  VAN HOA AI BOT - HQuanz VIP")
-    print("  23 Algorithms | Redis | All-in-One")
+    print("  23 Algorithms | JSON File | All-in-One")
     print("═"*40)
     
     # Load initial data
