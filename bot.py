@@ -695,7 +695,8 @@ def a32_support(hist):
 
 def a33_fibretrace(hist):
     if len(hist) < 30:
-        return hist[-1]["result"] if hist else TAI, 58    r = [1 if h["result"] == TAI else -1 for h in hist[-30:]]
+        return hist[-1]["result"] if hist else TAI, 58
+    r = [1 if h["result"] == TAI else -1 for h in hist[-30:]]
     high = max(r)
     low = min(r)
     diff = high - low
@@ -778,7 +779,6 @@ def a38_sentiment(hist):
     if len(hist) < 15:
         return hist[-1]["result"] if hist else TAI, 55
     r = [h["result"] for h in hist[-15:]]
-    # Tính tỷ lệ Tài/Xỉu
     t = r.count(TAI)
     ratio = t / len(r)
     if ratio > 0.6:
@@ -809,7 +809,6 @@ def a40_volume_profile(hist):
     if len(hist) < 15:
         return hist[-1]["result"] if hist else TAI, 55
     r = [h["result"] for h in hist[-15:]]
-    # Giả lập volume
     t_vol = r.count(TAI) * 1.2
     x_vol = r.count(XIU) * 0.8
     if t_vol > x_vol * 1.3:
@@ -822,11 +821,9 @@ def a41_market_profile(hist):
     if len(hist) < 20:
         return hist[-1]["result"] if hist else TAI, 55
     r = [h["result"] for h in hist[-20:]]
-    # Tìm giá trị trung tâm
     t_count = r.count(TAI)
     x_count = len(r) - t_count
     if t_count > x_count:
-        # Nếu Tài chiếm ưu thế, có thể đảo chiều
         return XIU, int(60 + (t_count - x_count)*2)
     else:
         return TAI, int(60 + (x_count - t_count)*2)
@@ -835,7 +832,6 @@ def a42_breakout(hist):
     if len(hist) < 10:
         return hist[-1]["result"] if hist else TAI, 55
     r = [h["result"] for h in hist[-10:]]
-    # Tìm breakout pattern
     if len(r) >= 5 and r[-5:] == [TAI, TAI, TAI, XIU, XIU]:
         return TAI, 72
     if len(r) >= 5 and r[-5:] == [XIU, XIU, XIU, TAI, TAI]:
@@ -846,7 +842,6 @@ def a43_double_top(hist):
     if len(hist) < 12:
         return hist[-1]["result"] if hist else TAI, 55
     r = [h["result"] for h in hist[-12:]]
-    # Tìm double top (T-T)
     if len(r) >= 6:
         if r[-6] == TAI and r[-5] == TAI and r[-4] == XIU and r[-3] == XIU and r[-2] == TAI and r[-1] == TAI:
             return XIU, 75
@@ -869,7 +864,6 @@ def a45_continuation(hist):
     if len(hist) < 8:
         return hist[-1]["result"] if hist else TAI, 55
     r = [h["result"] for h in hist[-8:]]
-    # Continuation pattern
     if len(r) >= 4 and r[-4] == r[-3] == r[-2] and r[-1] == opp(r[-2]):
         return r[-2], 70
     return r[-1], 58
@@ -879,7 +873,6 @@ def a46_pattern_boost(hist):
     if len(hist) < 20:
         return hist[-1]["result"] if hist else TAI, 55
     r = [h["result"] for h in hist[-20:]]
-    # Tìm pattern lặp lại
     for length in [3, 4, 5]:
         if len(r) >= length * 2:
             pattern = r[-length:]
@@ -895,7 +888,6 @@ def a46_pattern_boost(hist):
 def a47_ensemble_vote(hist):
     if len(hist) < 15:
         return hist[-1]["result"] if hist else TAI, 55
-    # Ensemble của 5 thuật toán tốt nhất
     votes = {TAI: 0, XIU: 0}
     for fn in [a2_trend, a6_break, a16_compbreak, a19_popular, a23_entropy]:
         try:
@@ -911,14 +903,11 @@ def a48_adaptive_momentum(hist):
     if len(hist) < 15:
         return hist[-1]["result"] if hist else TAI, 55
     r = [h["result"] for h in hist[-15:]]
-    # Tỷ lệ thay đổi
     changes = sum(1 for i in range(1, len(r)) if r[i] != r[i-1])
     if changes > len(r) * 0.6:
-        # Thị trường biến động, theo xu hướng ngắn
         c = Counter(r[-5:])
         return c.most_common(1)[0][0], 62
     else:
-        # Thị trường ổn định, bám xu hướng dài
         c = Counter(r[-10:])
         dom = c.most_common(1)[0][0]
         ratio = c[dom] / len(r)
@@ -928,7 +917,6 @@ def a49_neural_boost(hist):
     if len(hist) < 20:
         return hist[-1]["result"] if hist else TAI, 55
     r = [1 if h["result"] == TAI else -1 for h in hist[-20:]]
-    # Simple neural-like prediction
     weights = [0.3, 0.2, 0.15, 0.1, 0.08, 0.07, 0.05, 0.05]
     pred = 0
     for i in range(min(len(weights), len(r))):
@@ -944,7 +932,6 @@ def a50_trend_strength(hist):
     if len(hist) < 20:
         return hist[-1]["result"] if hist else TAI, 55
     r = [h["result"] for h in hist[-20:]]
-    # Đo lường sức mạnh xu hướng
     t_count = r.count(TAI)
     x_count = len(r) - t_count
     strength = abs(t_count - x_count) / len(r)
@@ -958,7 +945,6 @@ def a51_volatility_break(hist):
     r = [h["result"] for h in hist[-15:]]
     changes = sum(1 for i in range(1, len(r)) if r[i] != r[i-1])
     if changes >= 10:
-        # Biến động cao, bẻ cầu
         return opp(r[-1]), int(68 + (changes - 10)*2)
     return r[-1], 58
 
@@ -966,7 +952,6 @@ def a52_multi_timeframe(hist):
     if len(hist) < 30:
         return hist[-1]["result"] if hist else TAI, 55
     r = [h["result"] for h in hist]
-    # Phân tích nhiều khung thời gian
     tf5 = r[-5:].count(TAI) / 5
     tf10 = r[-10:].count(TAI) / 10
     tf20 = r[-20:].count(TAI) / 20
@@ -981,7 +966,6 @@ def a53_gaussian_filter(hist):
     if len(hist) < 15:
         return hist[-1]["result"] if hist else TAI, 55
     r = [1 if h["result"] == TAI else -1 for h in hist[-15:]]
-    # Gaussian-like smoothing
     gaussian_weights = [0.05, 0.1, 0.15, 0.2, 0.25, 0.2, 0.15, 0.1, 0.05]
     pred = 0
     for i in range(min(len(gaussian_weights), len(r))):
@@ -996,7 +980,6 @@ def a54_monte_carlo(hist):
     if len(hist) < 20:
         return hist[-1]["result"] if hist else TAI, 55
     r = [h["result"] for h in hist[-20:]]
-    # Mô phỏng Monte Carlo
     t_prob = r.count(TAI) / len(r)
     if t_prob > 0.6:
         return TAI, int(65 + t_prob*20)
@@ -1008,7 +991,6 @@ def a55_fractal(hist):
     if len(hist) < 20:
         return hist[-1]["result"] if hist else TAI, 55
     r = [h["result"] for h in hist[-20:]]
-    # Tìm pattern fractal
     patterns = []
     for i in range(len(r) - 5):
         patterns.append(tuple(r[i:i+5]))
@@ -1024,7 +1006,6 @@ def a56_optimal_f(hist):
     if len(hist) < 20:
         return hist[-1]["result"] if hist else TAI, 55
     r = [1 if h["result"] == TAI else -1 for h in hist[-20:]]
-    # Tối ưu hóa tỷ lệ thắng
     win_rate = sum(1 for i in range(1, len(r)) if r[i] == r[i-1]) / len(r)
     if win_rate > 0.6:
         return TAI if r[-1] > 0 else XIU, int(65 + win_rate*30)
@@ -1034,11 +1015,9 @@ def a57_risk_adjusted(hist):
     if len(hist) < 15:
         return hist[-1]["result"] if hist else TAI, 55
     r = [h["result"] for h in hist[-15:]]
-    # Điều chỉnh rủi ro
     t_count = r.count(TAI)
     volatility = sum(1 for i in range(1, len(r)) if r[i] != r[i-1]) / len(r)
     if volatility < 0.3:
-        # Ít biến động, theo xu hướng
         return (TAI if t_count > len(r)/2 else XIU), int(65 + (1-volatility)*30)
     return r[-1], 55
 
@@ -1046,7 +1025,6 @@ def a58_momentum_break(hist):
     if len(hist) < 12:
         return hist[-1]["result"] if hist else TAI, 55
     r = [h["result"] for h in hist[-12:]]
-    # Bẻ cầu dựa trên đà
     momentum = sum(1 for i in range(1, len(r)) if r[i] == r[i-1])
     if momentum >= 8:
         return opp(r[-1]), int(70 + (momentum-6)*3)
@@ -1055,7 +1033,6 @@ def a58_momentum_break(hist):
 def a59_weighted_ensemble(hist):
     if len(hist) < 15:
         return hist[-1]["result"] if hist else TAI, 55
-    # Ensemble có trọng số
     results = []
     for fn, w in [(a2_trend, 0.3), (a6_break, 0.3), (a16_compbreak, 0.25), (a23_entropy, 0.15)]:
         try:
@@ -1076,15 +1053,12 @@ def a59_weighted_ensemble(hist):
 def a60_adaptive_ensemble(hist):
     if len(hist) < 20:
         return hist[-1]["result"] if hist else TAI, 55
-    # Ensemble thích ứng dựa trên biến động
     r = [h["result"] for h in hist[-20:]]
     changes = sum(1 for i in range(1, len(r)) if r[i] != r[i-1]) / len(r)
     if changes > 0.5:
-        # Biến động cao, ưu tiên thuật toán ngắn hạn
         res, conf = a4_short(hist)
         return res, conf
     else:
-        # Biến động thấp, ưu tiên thuật toán dài hạn
         res, conf = a2_trend(hist)
         return res, conf
 
@@ -1190,7 +1164,6 @@ class AIEngine:
         details = {}
         per_algo = []
 
-        # Sử dụng chỉ 40 thuật toán tốt nhất để tăng tốc
         for name, fn in ALGOS[:40]:
             try:
                 res, conf = fn(self.history)
@@ -1463,13 +1436,6 @@ async def callback(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
             reply_markup=main_keyboard(),
             parse_mode=ParseMode.MARKDOWN
         )
-        return
-
-    # ─── DELKEY COMMAND ─────────────────────────────────────────
-    if data == "delkey_confirm":
-        if uid not in ADMIN_IDS:
-            return
-        # Xử lý xóa key (sẽ được trigger từ command)
         return
 
     # ─── CHECK USER ────────────────────────────────────────────
