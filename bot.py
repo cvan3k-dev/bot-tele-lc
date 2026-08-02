@@ -29,7 +29,7 @@ from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandle
 # ═══════════════════════════════════════════════════════════════════
 #  CẤU HÌNH CAO CẤP
 # ═══════════════════════════════════════════════════════════════════
-BOT_TOKEN   = "8774993011:AAHM3uCpCqlaOTRdOIL1mDU-JGDkdLT78sA"
+BOT_TOKEN = os.getenv("BOT_TOKEN", "YOUR_BOT_TOKEN_HERE")
 ADMIN_IDS   = [5888859004]
 API_URL     = "https://wtxmd52.tele68.com/v1/txmd5/sessions"
 SYNC_SEC    = 5                      # Đồng bộ mỗi 5 giây
