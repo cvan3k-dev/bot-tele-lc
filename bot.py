@@ -18,7 +18,7 @@ from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandle
 # ════════════════════════════════════════════════════════════════
 #  CONFIG - ĐỔI Ở ĐÂY
 # ════════════════════════════════════════════════════════════════
-BOT_TOKEN   = "8774993011:AAHM3uCpCqlaOTRdOIL1mDU-JGDkdLT78sA"
+BOT_TOKEN   = "8774993011:AAFw8cYSkUfcjJKvVNYQgb07XnQGgyjKaSM"
 ADMIN_IDS   = [5888859004]
 API_URL     = "https://wtxmd52.tele68.com/v1/txmd5/sessions"
 SYNC_SEC    = 6
