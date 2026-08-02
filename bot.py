@@ -1,12 +1,21 @@
 #!/usr/bin/env python3
 # ═══════════════════════════════════════════════════════════════════
 #   CAO FPS - SIÊU BOT DỰ ĐOÁN TÀI XỈU
-#   Version: 3.0 | 35 Thuật Toán + AI Học Tăng Cường
-#   Phân Tích 30 Phiên Gần + 30 Phiên Sâu
-#   Tối Ưu Render | Giao Diện Đẹp | HQuanz Studio
+#   Version: 3.1 | 35 Thuật Toán + AI Học Tăng Cường
+#   Phân Tích 30-30 Phiên | Render Optimized
+#   HQuanz Studio
 # ═══════════════════════════════════════════════════════════════════
 
-import os, sys, json, time, uuid, threading, ssl, urllib.request, math, random
+import os
+import sys
+import json
+import time
+import uuid
+import threading
+import ssl
+import urllib.request
+import math
+import random
 from datetime import datetime, timedelta
 from collections import Counter, deque
 from math import log2, sqrt
@@ -29,17 +38,17 @@ from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandle
 # ═══════════════════════════════════════════════════════════════════
 #  CẤU HÌNH CAO CẤP
 # ═══════════════════════════════════════════════════════════════════
-BOT_TOKEN = os.getenv("BOT_TOKEN", "YOUR_BOT_TOKEN_HERE")
-ADMIN_IDS   = [5888859004]
-API_URL     = "https://wtxmd52.tele68.com/v1/txmd5/sessions"
-SYNC_SEC    = 5                      # Đồng bộ mỗi 5 giây
-TAI, XIU    = "T", "X"
-DATA_FILE   = "caofps_data.json"
+BOT_TOKEN = os.getenv("BOT_TOKEN", "8774993011:AAHM3uCpCqlaOTRdOIL1mDU-JGDkdLT78sA")
+ADMIN_IDS = [5888859004]
+API_URL = "https://wtxmd52.tele68.com/v1/txmd5/sessions"
+SYNC_SEC = 5
+TAI, XIU = "T", "X"
+DATA_FILE = "caofps_data.json"
 
 # Cấu hình AI
-LEARNING_RATE = 0.01                 # Tốc độ học
-MEMORY_SIZE = 100                    # Bộ nhớ dự đoán
-DEEP_ANALYSIS = 30                   # Số phiên phân tích sâu
+LEARNING_RATE = 0.01
+MEMORY_SIZE = 100
+DEEP_ANALYSIS = 30
 
 # ═══════════════════════════════════════════════════════════════════
 #  DATABASE THÔNG MINH (JSON)
@@ -53,26 +62,37 @@ class SmartDB:
             try:
                 with open(DATA_FILE, "r", encoding="utf-8") as f:
                     return json.load(f)
-            except: pass
+            except:
+                pass
         return {
-            "keys": {}, 
-            "users": {}, 
+            "keys": {},
+            "users": {},
             "stats": {"total": 0, "win": 0, "loss": 0, "streak": 0, "best": 0},
-            "ai_memory": [],           # Bộ nhớ AI
-            "pattern_db": {}           # Cơ sở dữ liệu pattern
+            "ai_memory": [],
+            "pattern_db": {}
         }
     
     def _save(self):
         try:
             with open(DATA_FILE, "w", encoding="utf-8") as f:
                 json.dump(self._data, f, indent=2, ensure_ascii=False)
-        except: pass
+        except:
+            pass
     
-    def get_keys(self): return self._data.get("keys", {})
-    def get_users(self): return self._data.get("users", {})
-    def get_stats(self): return self._data.get("stats", {"total": 0, "win": 0, "loss": 0, "streak": 0, "best": 0})
-    def get_ai_memory(self): return self._data.get("ai_memory", [])
-    def get_pattern_db(self): return self._data.get("pattern_db", {})
+    def get_keys(self):
+        return self._data.get("keys", {})
+    
+    def get_users(self):
+        return self._data.get("users", {})
+    
+    def get_stats(self):
+        return self._data.get("stats", {"total": 0, "win": 0, "loss": 0, "streak": 0, "best": 0})
+    
+    def get_ai_memory(self):
+        return self._data.get("ai_memory", [])
+    
+    def get_pattern_db(self):
+        return self._data.get("pattern_db", {})
     
     def save_key(self, k, v):
         self._data["keys"][k] = v
@@ -87,7 +107,7 @@ class SmartDB:
         self._save()
     
     def save_ai_memory(self, mem):
-        self._data["ai_memory"] = mem[-MEMORY_SIZE:]  # Giữ kích thước cố định
+        self._data["ai_memory"] = mem[-MEMORY_SIZE:]
         self._save()
     
     def save_pattern(self, key, value):
@@ -97,7 +117,7 @@ class SmartDB:
 db = SmartDB()
 
 # ═══════════════════════════════════════════════════════════════════
-#  HỆ THỐNG KEY CAO CẤP
+#  HỆ THỐNG KEY
 # ═══════════════════════════════════════════════════════════════════
 def gen_key(days):
     key = "FPS-" + uuid.uuid4().hex[:12].upper()
@@ -128,20 +148,23 @@ def activate_key(uid, key):
     return f"✅ Kích hoạt thành công!\n⏰ Hết hạn: {exp}"
 
 def is_valid(uid):
-    if uid in ADMIN_IDS: return True
+    if uid in ADMIN_IDS:
+        return True
     u = db.get_users().get(str(uid))
     return u and datetime.fromisoformat(u["expire"]) > datetime.now()
 
 def expire_str(uid):
-    if uid in ADMIN_IDS: return "∞ Admin"
+    if uid in ADMIN_IDS:
+        return "∞ Admin"
     u = db.get_users().get(str(uid))
-    if not u: return "Chưa kích hoạt"
+    if not u:
+        return "Chưa kích hoạt"
     exp = datetime.fromisoformat(u["expire"])
     days_left = (exp - datetime.now()).days
     return f"{exp.strftime('%d/%m/%Y')} (còn {days_left} ngày)"
 
 # ═══════════════════════════════════════════════════════════════════
-#  FETCH API TỐI ƯU
+#  FETCH API
 # ═══════════════════════════════════════════════════════════════════
 SSL_CTX = ssl.create_default_context()
 SSL_CTX.check_hostname = False
@@ -153,8 +176,8 @@ def fetch_history():
         with urllib.request.urlopen(req, timeout=8, context=SSL_CTX) as r:
             d = json.loads(r.read().decode())
             if d.get("list"):
-                hist = [{"session": int(i["id"]), 
-                         "result": "T" if i.get("resultTruyenThong") == "TAI" else "X"} 
+                hist = [{"session": int(i["id"]),
+                         "result": "T" if i.get("resultTruyenThong") == "TAI" else "X"}
                         for i in d["list"]]
                 hist.reverse()
                 return hist
@@ -163,29 +186,27 @@ def fetch_history():
     return []
 
 # ═══════════════════════════════════════════════════════════════════
-#  35 THUẬT TOÁN THÔNG MINH (NÂNG CẤP)
+#  35 THUẬT TOÁN
 # ═══════════════════════════════════════════════════════════════════
-def opp(r): return XIU if r == TAI else TAI
+def opp(r):
+    return XIU if r == TAI else TAI
 
-# ---- 1. Pattern cơ bản ----
 def a1_basic(hist):
-    if len(hist) < 5: return hist[-1]["result"] if hist else TAI, 60
+    if len(hist) < 5:
+        return hist[-1]["result"] if hist else TAI, 60
     r = [h["result"] for h in hist[-10:]]
-    # Cầu 1-1
     if len(r) >= 4 and r[-1] != r[-2] and r[-2] != r[-3] and r[-3] != r[-4]:
         return opp(r[-1]), 72
-    # Cầu 2-2
     if len(r) >= 4 and r[-1] == r[-2] and r[-3] == r[-4] and r[-2] != r[-3]:
         return opp(r[-1]), 75
-    # Cầu 3
     if len(r) >= 3 and r[-1] == r[-2] == r[-3]:
         return r[-1], 78
     c = Counter(r[-5:])
     return (TAI if c[TAI] > c[XIU] else XIU), 62
 
-# ---- 2. Phân tích xu hướng đa tầng ----
 def a2_trend(hist):
-    if len(hist) < 15: return hist[-1]["result"] if hist else TAI, 58
+    if len(hist) < 15:
+        return hist[-1]["result"] if hist else TAI, 58
     r = [h["result"] for h in hist]
     def trend(n):
         s = r[-n:]
@@ -194,136 +215,157 @@ def a2_trend(hist):
     s_t, s_s = trend(5)
     m_t, m_s = trend(10)
     l_t, l_s = trend(20)
-    deep_t, deep_s = trend(30)  # Phân tích sâu 30 phiên
+    deep_t, deep_s = trend(30)
     sc = {TAI: 0.0, XIU: 0.0}
     for p, q, w in [(s_t, s_s, 0.4), (m_t, m_s, 0.3), (l_t, l_s, 0.2), (deep_t, deep_s, 0.1)]:
         sc[p] += q * w
     w = TAI if sc[TAI] >= sc[XIU] else XIU
     return w, min(92, int(60 + min(sc[w], 0.4) * 80))
 
-# ---- 3. Mất cân bằng ----
 def a3_imbalance(hist):
-    if len(hist) < 20: return hist[-1]["result"] if hist else TAI, 55
+    if len(hist) < 20:
+        return hist[-1]["result"] if hist else TAI, 55
     r = [h["result"] for h in hist[-20:]]
-    t = r.count(TAI); x = 20-t
+    t = r.count(TAI)
+    x = 20-t
     if abs(t-x) >= 6:
         return (XIU if t > x else TAI), int(65 + (abs(t-x)-6)*3)
     return hist[-1]["result"], 55
 
-# ---- 4. Phân tích ngắn hạn ----
 def a4_short(hist):
-    if len(hist) < 8: return hist[-1]["result"] if hist else TAI, 58
+    if len(hist) < 8:
+        return hist[-1]["result"] if hist else TAI, 58
     r = [h["result"] for h in hist[-8:]]
     l3 = r[-3:]
-    if all(v == TAI for v in l3): return TAI, 76
-    if all(v == XIU for v in l3): return XIU, 76
-    if l3[0] == l3[1] and l3[1] != l3[2]: return l3[1], 70
-    if l3[1] == l3[2] and l3[0] != l3[1]: return opp(l3[2]), 68
+    if all(v == TAI for v in l3):
+        return TAI, 76
+    if all(v == XIU for v in l3):
+        return XIU, 76
+    if l3[0] == l3[1] and l3[1] != l3[2]:
+        return l3[1], 70
+    if l3[1] == l3[2] and l3[0] != l3[1]:
+        return opp(l3[2]), 68
     t = r.count(TAI)
     return (TAI if t > 4 else XIU), 62
 
-# ---- 5. Trọng số cân bằng ----
 def a5_weight(hist):
-    if len(hist) < 30: return hist[-1]["result"] if hist else TAI, 55
+    if len(hist) < 30:
+        return hist[-1]["result"] if hist else TAI, 55
     r = [h["result"] for h in hist[-30:]]
-    t = r.count(TAI); x = 30-t
+    t = r.count(TAI)
+    x = 30-t
     if abs(t-x) >= 10:
         return (XIU if t > x else TAI), int(65 + (abs(t-x)-10)*2)
     return hist[-1]["result"], 55
 
-# ---- 6. Bẻ cầu thông minh ----
 def a6_break(hist):
-    if len(hist) < 10: return hist[-1]["result"] if hist else TAI, 58
+    if len(hist) < 10:
+        return hist[-1]["result"] if hist else TAI, 58
     r = [h["result"] for h in hist]
     last = r[-1]
     streak = 1
     for i in range(len(r)-2, -1, -1):
-        if r[i] == last: streak += 1
-        else: break
-    if streak >= 8: return opp(last), 85
-    if streak >= 6: return opp(last), 78
-    if streak >= 4: return opp(last), 70
-    if streak >= 3: return last, 72
+        if r[i] == last:
+            streak += 1
+        else:
+            break
+    if streak >= 8:
+        return opp(last), 85
+    if streak >= 6:
+        return opp(last), 78
+    if streak >= 4:
+        return opp(last), 70
+    if streak >= 3:
+        return last, 72
     return last, 62
 
-# ---- 7. Tái cân bằng thông minh ----
 def a7_rebalance(hist):
-    if len(hist) < 20: return hist[-1]["result"] if hist else TAI, 55
+    if len(hist) < 20:
+        return hist[-1]["result"] if hist else TAI, 55
     r = [h["result"] for h in hist[-20:]]
-    t = r.count(TAI); x = 20-t
-    ratio = max(t,x)/20
+    t = r.count(TAI)
+    x = 20-t
+    ratio = max(t, x)/20
     if ratio > 0.70:
         return (XIU if t > x else TAI), int(65 + ratio*25)
     return hist[-1]["result"], 55
 
-# ---- 8. Ngẫu nhiên hóa ----
 def a8_random(hist):
-    if len(hist) < 15: return hist[-1]["result"] if hist else TAI, 55
+    if len(hist) < 15:
+        return hist[-1]["result"] if hist else TAI, 55
     r = [h["result"] for h in hist[-15:]]
     chg = sum(1 for i in range(1, len(r)) if r[i] != r[i-1])
     rate = chg/14
-    if rate > 0.70: return hist[-1]["result"], 50
+    if rate > 0.70:
+        return hist[-1]["result"], 50
     return Counter(r).most_common(1)[0][0], int(68 - rate*30)
 
-# ---- 9. Fibonacci nâng cao ----
 def a9_fib(hist):
-    if len(hist) < 10: return hist[-1]["result"] if hist else TAI, 58
+    if len(hist) < 10:
+        return hist[-1]["result"] if hist else TAI, 58
     r = [h["result"] for h in hist[-10:]]
-    fib = [1,1,2,3,5,8,13,21,34,55][:len(r)]
-    tw = sum(fib[i] for i,v in enumerate(r) if v == TAI)
-    xw = sum(fib[i] for i,v in enumerate(r) if v == XIU)
+    fib = [1, 1, 2, 3, 5, 8, 13, 21, 34, 55][:len(r)]
+    tw = sum(fib[i] for i, v in enumerate(r) if v == TAI)
+    xw = sum(fib[i] for i, v in enumerate(r) if v == XIU)
     w = TAI if tw >= xw else XIU
     return w, min(88, int(60 + (abs(tw-xw)/(tw+xw))*40 if tw+xw > 0 else 60))
 
-# ---- 10. Xác suất bẻ cầu ----
 def a10_prob(hist):
-    if len(hist) < 30: return hist[-1]["result"] if hist else TAI, 58
+    if len(hist) < 30:
+        return hist[-1]["result"] if hist else TAI, 58
     r = [h["result"] for h in hist]
     last = r[-1]
     streak = 1
     for i in range(len(r)-2, -1, -1):
-        if r[i] == last: streak += 1
-        else: break
-    brk = 0; total = 0
+        if r[i] == last:
+            streak += 1
+        else:
+            break
+    brk = 0
+    total = 0
     for i in range(len(r)-1):
         run = 1
         for j in range(i-1, -1, -1):
-            if r[j] == r[i]: run += 1
-            else: break
+            if r[j] == r[i]:
+                run += 1
+            else:
+                break
         if run == streak and i+1 < len(r):
             total += 1
-            if r[i+1] != r[i]: brk += 1
+            if r[i+1] != r[i]:
+                brk += 1
     prob = brk/total if total > 0 else 0.5
     return (opp(last) if prob > 0.55 else last), int(55 + prob*35)
 
-# ---- 11. Biến động thị trường ----
 def a11_volatility(hist):
-    if len(hist) < 20: return hist[-1]["result"] if hist else TAI, 58
+    if len(hist) < 20:
+        return hist[-1]["result"] if hist else TAI, 58
     r = [h["result"] for h in hist[-20:]]
     chg = sum(1 for i in range(1, len(r)) if r[i] != r[i-1])
     vol = chg/19
     if vol < 0.3:
         return Counter(r).most_common(1)[0][0], int(72 + (0.3-vol)*70)
-    if vol > 0.70: return opp(r[-1]), 62
+    if vol > 0.70:
+        return opp(r[-1]), 62
     c = Counter(r[-6:])
     return (TAI if c[TAI] > c[XIU] else XIU), 62
 
-# ---- 12. Pattern database ----
 def a12_pattern(hist):
-    if len(hist) < 5: return hist[-1]["result"] if hist else TAI, 58
+    if len(hist) < 5:
+        return hist[-1]["result"] if hist else TAI, 58
     r = [h["result"] for h in hist]
     patterns = {
-        ("T","X","T","X"):TAI, ("X","T","X","T"):XIU,
-        ("T","T","X","X"):TAI, ("X","X","T","T"):XIU,
-        ("T","X","X","T"):XIU, ("X","T","T","X"):TAI,
-        ("T","T","T","X"):XIU, ("X","X","X","T"):TAI,
-        ("T","X","T","T"):XIU, ("X","T","X","X"):TAI,
-        ("T","T","X","T"):TAI, ("X","X","T","X"):XIU,
+        ("T", "X", "T", "X"): TAI, ("X", "T", "X", "T"): XIU,
+        ("T", "T", "X", "X"): TAI, ("X", "X", "T", "T"): XIU,
+        ("T", "X", "X", "T"): XIU, ("X", "T", "T", "X"): TAI,
+        ("T", "T", "T", "X"): XIU, ("X", "X", "X", "T"): TAI,
+        ("T", "X", "T", "T"): XIU, ("X", "T", "X", "X"): TAI,
+        ("T", "T", "X", "T"): TAI, ("X", "X", "T", "X"): XIU,
     }
     patterns3 = {
-        ("T","X","T"):TAI, ("X","T","X"):XIU,
-        ("T","T","X"):XIU, ("X","X","T"):TAI,
-        ("T","X","X"):XIU, ("X","T","T"):TAI,
+        ("T", "X", "T"): TAI, ("X", "T", "X"): XIU,
+        ("T", "T", "X"): XIU, ("X", "X", "T"): TAI,
+        ("T", "X", "X"): XIU, ("X", "T", "T"): TAI,
     }
     if len(r) >= 5 and tuple(r[-5:]) in patterns:
         return patterns[tuple(r[-5:])], 75
@@ -333,12 +375,12 @@ def a12_pattern(hist):
         return patterns3[tuple(r[-3:])], 65
     return r[-1], 55
 
-# ---- 13. Hiệu suất trọng số ----
-def a13_performance(hist): return a2_trend(hist)
+def a13_performance(hist):
+    return a2_trend(hist)
 
-# ---- 14. Phân tích bẻ trend ----
 def a14_trendbreak(hist):
-    if len(hist) < 30: return hist[-1]["result"] if hist else TAI, 58
+    if len(hist) < 30:
+        return hist[-1]["result"] if hist else TAI, 58
     r = [h["result"] for h in hist[-25:]]
     dom = Counter(r).most_common(1)[0][0]
     ratio = r.count(dom)/25
@@ -346,64 +388,79 @@ def a14_trendbreak(hist):
         return opp(dom), int(55 + ratio*25)
     return hist[-1]["result"], 58
 
-# ---- 15. Bám trend ----
 def a15_follow(hist):
-    if len(hist) < 15: return hist[-1]["result"] if hist else TAI, 58
+    if len(hist) < 15:
+        return hist[-1]["result"] if hist else TAI, 58
     r = [h["result"] for h in hist]
     t15 = r[-15:]
-    t = t15.count(TAI); x = 15-t
+    t = t15.count(TAI)
+    x = 15-t
     if abs(t-x)/15 > 0.45:
         return (TAI if t > x else XIU), int(65 + abs(t-x)/15*35)
     c = Counter(r[-6:])
     return c.most_common(1)[0][0], 62
 
-# ---- 16. Tổng hợp bẻ cầu nâng cao ----
 def a16_compbreak(hist):
-    if len(hist) < 20: return hist[-1]["result"] if hist else TAI, 58
+    if len(hist) < 20:
+        return hist[-1]["result"] if hist else TAI, 58
     r = [h["result"] for h in hist]
     last = r[-1]
     streak = 1
     for i in range(len(r)-2, -1, -1):
-        if r[i] == last: streak += 1
-        else: break
+        if r[i] == last:
+            streak += 1
+        else:
+            break
     sc = {opp(last): 0.0, last: 0.0}
-    if streak >= 5: sc[opp(last)] += 0.45
-    elif streak >= 3: sc[opp(last)] += 0.25
-    else: sc[last] += 0.2
+    if streak >= 5:
+        sc[opp(last)] += 0.45
+    elif streak >= 3:
+        sc[opp(last)] += 0.25
+    else:
+        sc[last] += 0.2
     dom = Counter(r[-12:]).most_common(1)[0][0]
-    if dom == last: sc[last] += 0.3
-    else: sc[opp(last)] += 0.3
+    if dom == last:
+        sc[last] += 0.3
+    else:
+        sc[opp(last)] += 0.3
     c = Counter(r[-30:])
     n = len(c.elements())
     ent = -sum((v/n)*log2(v/n) for v in c.values() if v > 0) if n > 0 else 1
-    if ent > 0.90: sc[opp(last)] += 0.25
-    else: sc[last] += 0.2
+    if ent > 0.90:
+        sc[opp(last)] += 0.25
+    else:
+        sc[last] += 0.2
     w = max(sc, key=sc.get)
     return w, min(92, int(60 + sc[w]*42))
 
-# ---- 17. Thích ứng ----
-def a17_adaptive(hist): return a15_follow(hist)
+def a17_adaptive(hist):
+    return a15_follow(hist)
 
-# ---- 18. Xu hướng ngắn ----
 def a18_shorttrend(hist):
-    if len(hist) < 8: return hist[-1]["result"] if hist else TAI, 58
+    if len(hist) < 8:
+        return hist[-1]["result"] if hist else TAI, 58
     s = [h["result"] for h in hist[-8:]]
-    t = s.count(TAI); x = 8-t
-    if t > x*2.5: return TAI, int(74 + (t-x)*2)
-    if x > t*2.5: return XIU, int(74 + (x-t)*2)
+    t = s.count(TAI)
+    x = 8-t
+    if t > x*2.5:
+        return TAI, int(74 + (t-x)*2)
+    if x > t*2.5:
+        return XIU, int(74 + (x-t)*2)
     return (TAI if t > x else XIU), int(62 + abs(t-x)*5)
 
-# ---- 19. Pattern phổ biến ----
 def a19_popular(hist):
-    if len(hist) < 30: return hist[-1]["result"] if hist else TAI, 58
+    if len(hist) < 30:
+        return hist[-1]["result"] if hist else TAI, 58
     r = [h["result"] for h in hist[-35:]]
-    pn = {}; pc = {}
+    pn = {}
+    pc = {}
     for i in range(len(r)-4):
         k = tuple(r[i:i+4])
         nxt = r[i+4] if i+4 < len(r) else None
         if nxt:
             pc[k] = pc.get(k, 0) + 1
-            if k not in pn: pn[k] = {TAI: 0, XIU: 0}
+            if k not in pn:
+                pn[k] = {TAI: 0, XIU: 0}
             pn[k][nxt] += 1
     l4 = tuple(r[-4:])
     if l4 in pn:
@@ -413,35 +470,37 @@ def a19_popular(hist):
     c = Counter(r[-12:])
     return c.most_common(1)[0][0], 58
 
-# ---- 20. Ensemble Top ----
 def a20_ensemble(hist):
-    if len(hist) < 15: return hist[-1]["result"] if hist else TAI, 60
+    if len(hist) < 15:
+        return hist[-1]["result"] if hist else TAI, 60
     sc = {TAI: 0.0, XIU: 0.0}
-    for fn, w in [(a2_trend, 1.6), (a6_break, 1.4), (a19_popular, 1.3), (a16_compbreak, 1.2), (a22_entropy, 1.1)]:
+    for fn, w in [(a2_trend, 1.6), (a6_break, 1.4), (a19_popular, 1.3), (a16_compbreak, 1.2), (a23_entropy, 1.1)]:
         r, c = fn(hist)
         sc[r] += w * (c/100)
     total = sc[TAI] + sc[XIU]
     w = max(sc, key=sc.get)
     return w, min(94, int(60 + (sc[w]/total)*40 if total > 0 else 60))
 
-# ---- 21. Cân bằng toàn cục ----
 def a21_global(hist):
-    if len(hist) < 50: return hist[-1]["result"] if hist else TAI, 58
+    if len(hist) < 50:
+        return hist[-1]["result"] if hist else TAI, 58
     r = [h["result"] for h in hist[-50:]]
-    t = r.count(TAI); x = 50-t
+    t = r.count(TAI)
+    x = 50-t
     if abs(t-x)/50 > 0.2:
         return (XIU if t > x else TAI), int(63 + abs(t-x)/50*42)
     return hist[-1]["result"], 55
 
-# ---- 22. Markov bậc 2 ----
 def a22_markov2(hist):
-    if len(hist) < 25: return hist[-1]["result"] if hist else TAI, 58
+    if len(hist) < 25:
+        return hist[-1]["result"] if hist else TAI, 58
     r = [h["result"] for h in hist]
     tr = {}
     for i in range(len(r)-2):
         k = (r[i], r[i+1])
         nxt = r[i+2]
-        if k not in tr: tr[k] = {TAI: 0, XIU: 0}
+        if k not in tr:
+            tr[k] = {TAI: 0, XIU: 0}
         tr[k][nxt] += 1
     k2 = (r[-2], r[-1])
     if k2 in tr:
@@ -452,22 +511,23 @@ def a22_markov2(hist):
             return w, min(91, int(62 + (p[w]/tot)*34))
     return r[-1], 58
 
-# ---- 23. Entropy ----
 def a23_entropy(hist):
-    if len(hist) < 15: return hist[-1]["result"] if hist else TAI, 58
+    if len(hist) < 15:
+        return hist[-1]["result"] if hist else TAI, 58
     r = [h["result"] for h in hist[-15:]]
     n = len(r)
     c = Counter(r)
     ent = -sum((v/n)*log2(v/n) for v in c.values() if v > 0)
     if ent < 0.65:
         return c.most_common(1)[0][0], int(82 - ent*20)
-    if ent > 0.90: return opp(r[-1]), 68
+    if ent > 0.90:
+        return opp(r[-1]), 68
     c5 = Counter(r[-6:])
     return (TAI if c5[TAI] > c5[XIU] else XIU), 62
 
-# ---- 24. Rolling Window ----
 def a24_rolling(hist):
-    if len(hist) < 20: return hist[-1]["result"] if hist else TAI, 58
+    if len(hist) < 20:
+        return hist[-1]["result"] if hist else TAI, 58
     r = [h["result"] for h in hist[-20:]]
     wins = [5, 7, 10, 12, 15, 20]
     scores = {TAI: 0.0, XIU: 0.0}
@@ -482,9 +542,9 @@ def a24_rolling(hist):
     conf = int(55 + (scores[w]/(scores[TAI]+scores[XIU]))*40)
     return w, min(90, conf)
 
-# ---- 25. Zigzag Pattern ----
 def a25_zigzag(hist):
-    if len(hist) < 10: return hist[-1]["result"] if hist else TAI, 58
+    if len(hist) < 10:
+        return hist[-1]["result"] if hist else TAI, 58
     r = [h["result"] for h in hist[-12:]]
     zigzag = sum(1 for i in range(2, len(r)) if r[i] != r[i-1] and r[i-1] != r[i-2])
     if zigzag >= 6:
@@ -492,11 +552,10 @@ def a25_zigzag(hist):
     c = Counter(r[-6:])
     return c.most_common(1)[0][0], 62
 
-# ---- 26. Deep Learning Sim ----
 def a26_deepsim(hist):
-    if len(hist) < 30: return hist[-1]["result"] if hist else TAI, 58
+    if len(hist) < 30:
+        return hist[-1]["result"] if hist else TAI, 58
     r = [h["result"] for h in hist[-30:]]
-    # Phân tích chuỗi dài
     streak_info = []
     i = 0
     while i < len(r):
@@ -515,58 +574,64 @@ def a26_deepsim(hist):
     c = Counter(r[-10:])
     return c.most_common(1)[0][0], 62
 
-# ---- 27. Momentum ----
 def a27_momentum(hist):
-    if len(hist) < 20: return hist[-1]["result"] if hist else TAI, 58
+    if len(hist) < 20:
+        return hist[-1]["result"] if hist else TAI, 58
     r = [h["result"] for h in hist[-20:]]
     momentum = 0
     for i in range(1, len(r)):
-        if r[i] == TAI: momentum += 1
-        else: momentum -= 1
+        if r[i] == TAI:
+            momentum += 1
+        else:
+            momentum -= 1
     if abs(momentum) >= 6:
         return (TAI if momentum > 0 else XIU), int(65 + abs(momentum)*2)
     return hist[-1]["result"], 58
 
-# ---- 28. Mean Reversion ----
 def a28_meanrev(hist):
-    if len(hist) < 30: return hist[-1]["result"] if hist else TAI, 55
+    if len(hist) < 30:
+        return hist[-1]["result"] if hist else TAI, 55
     r = [h["result"] for h in hist[-30:]]
     t = r.count(TAI)
-    mean = 0.5
     if t/30 > 0.65:
         return XIU, int(60 + (t/30 - 0.65)*100)
     if t/30 < 0.35:
         return TAI, int(60 + (0.35 - t/30)*100)
     return hist[-1]["result"], 55
 
-# ---- 29. RSI Sim ----
 def a29_rsi(hist):
-    if len(hist) < 15: return hist[-1]["result"] if hist else TAI, 58
+    if len(hist) < 15:
+        return hist[-1]["result"] if hist else TAI, 58
     r = [h["result"] for h in hist[-15:]]
     gains = sum(1 for i in range(1, len(r)) if r[i] == TAI and r[i-1] == XIU)
     losses = sum(1 for i in range(1, len(r)) if r[i] == XIU and r[i-1] == TAI)
-    if gains + losses == 0: return r[-1], 55
+    if gains + losses == 0:
+        return r[-1], 55
     rsi = gains / (gains + losses) * 100
-    if rsi > 70: return XIU, int(65 + (rsi-70)*0.5)
-    if rsi < 30: return TAI, int(65 + (30-rsi)*0.5)
+    if rsi > 70:
+        return XIU, int(65 + (rsi-70)*0.5)
+    if rsi < 30:
+        return TAI, int(65 + (30-rsi)*0.5)
     return r[-1], 58
 
-# ---- 30. MACD Sim ----
 def a30_macd(hist):
-    if len(hist) < 20: return hist[-1]["result"] if hist else TAI, 58
+    if len(hist) < 20:
+        return hist[-1]["result"] if hist else TAI, 58
     r = [1 if h["result"] == TAI else -1 for h in hist[-20:]]
     def sma(data, n):
         return sum(data[-n:]) / n
     ema12 = sma(r, 12)
     ema26 = sma(r, 26)
     macd = ema12 - ema26
-    if macd > 0.2: return TAI, int(65 + macd*20)
-    if macd < -0.2: return XIU, int(65 + abs(macd)*20)
+    if macd > 0.2:
+        return TAI, int(65 + macd*20)
+    if macd < -0.2:
+        return XIU, int(65 + abs(macd)*20)
     return ("T" if r[-1] > 0 else "X"), 58
 
-# ---- 31. Bollinger Bands ----
 def a31_bollinger(hist):
-    if len(hist) < 20: return hist[-1]["result"] if hist else TAI, 58
+    if len(hist) < 20:
+        return hist[-1]["result"] if hist else TAI, 58
     r = [1 if h["result"] == TAI else -1 for h in hist[-20:]]
     mean = sum(r) / len(r)
     std = sqrt(sum((x - mean)**2 for x in r) / len(r))
@@ -577,11 +642,10 @@ def a31_bollinger(hist):
         return TAI, int(65 + (mean - std - last)*20)
     return ("T" if last > 0 else "X"), 58
 
-# ---- 32. Support/Resistance ----
 def a32_support(hist):
-    if len(hist) < 20: return hist[-1]["result"] if hist else TAI, 58
+    if len(hist) < 20:
+        return hist[-1]["result"] if hist else TAI, 58
     r = [1 if h["result"] == TAI else -1 for h in hist[-20:]]
-    # Tìm vùng hỗ trợ/kháng cự
     highs = []
     lows = []
     for i in range(2, len(r)-2):
@@ -595,28 +659,30 @@ def a32_support(hist):
         return TAI, 68
     return ("T" if r[-1] > 0 else "X"), 58
 
-# ---- 33. Fibonacci Retracement ----
 def a33_fibretrace(hist):
-    if len(hist) < 30: return hist[-1]["result"] if hist else TAI, 58
+    if len(hist) < 30:
+        return hist[-1]["result"] if hist else TAI, 58
     r = [1 if h["result"] == TAI else -1 for h in hist[-30:]]
     high = max(r)
     low = min(r)
     diff = high - low
-    if diff == 0: return ("T" if r[-1] > 0 else "X"), 55
+    if diff == 0:
+        return ("T" if r[-1] > 0 else "X"), 55
     current = r[-1]
     fib_levels = [0.236, 0.382, 0.5, 0.618, 0.786]
     for level in fib_levels:
         price = high - diff * level
         if abs(current - price) / diff < 0.05:
-            if current > 0: return TAI, 72
-            else: return XIU, 72
+            if current > 0:
+                return TAI, 72
+            else:
+                return XIU, 72
     return ("T" if current > 0 else "X"), 58
 
-# ---- 34. Machine Learning Sim ----
 def a34_mlsim(hist):
-    if len(hist) < 30: return hist[-1]["result"] if hist else TAI, 58
+    if len(hist) < 30:
+        return hist[-1]["result"] if hist else TAI, 58
     r = [h["result"] for h in hist[-30:]]
-    # Simple ML: tìm pattern tương tự
     pattern = r[-5:]
     best_match = None
     best_score = 0
@@ -631,17 +697,18 @@ def a34_mlsim(hist):
     c = Counter(r[-10:])
     return c.most_common(1)[0][0], 60
 
-# ---- 35. Neural Network Sim ----
 def a35_nnsim(hist):
-    if len(hist) < 30: return hist[-1]["result"] if hist else TAI, 58
+    if len(hist) < 30:
+        return hist[-1]["result"] if hist else TAI, 58
     r = [1 if h["result"] == TAI else -1 for h in hist[-30:]]
-    # Simple NN simulation với trọng số
     weights = [0.5, 0.3, 0.2, 0.1, -0.1, -0.2, -0.3, -0.5]
     weighted_sum = 0
     for i in range(min(len(weights), len(r))):
         weighted_sum += r[-(i+1)] * weights[i]
-    if weighted_sum > 0.3: return TAI, int(65 + weighted_sum*20)
-    if weighted_sum < -0.3: return XIU, int(65 + abs(weighted_sum)*20)
+    if weighted_sum > 0.3:
+        return TAI, int(65 + weighted_sum*20)
+    if weighted_sum < -0.3:
+        return XIU, int(65 + abs(weighted_sum)*20)
     return ("T" if r[-1] > 0 else "X"), 58
 
 # ─── DANH SÁCH THUẬT TOÁN ───────────────────────────────────────
@@ -661,7 +728,7 @@ ALGOS = [
 ]
 
 # ═══════════════════════════════════════════════════════════════════
-#  AI ENGINE - HỌC TỪ DỰ ĐOÁN
+#  AI ENGINE - HỌC TỪ DỰ ĐOÁN (ĐÃ FIX LỖI MEMORY)
 # ═══════════════════════════════════════════════════════════════════
 class AIEngine:
     def __init__(self):
@@ -673,18 +740,18 @@ class AIEngine:
         self.last = None
         self.learning_rate = LEARNING_RATE
         self.prediction_count = 0
-    
+        self._learned_sessions = set()  # Lưu các session đã học
+
     def update(self, hist):
-        if not hist: return
+        if not hist:
+            return
         old_last = self.history[-1]["session"] if self.history else None
         self.history = hist
-        
-        # Học từ dự đoán trước
+
         if self.last and old_last and hist[-1]["session"] == self.last.get("session"):
             actual = hist[-1]["result"]
             self._learn(actual)
-            
-            # Cập nhật stats
+
             self.stats["total"] += 1
             hit = self.last["result"] == actual
             if hit:
@@ -695,14 +762,22 @@ class AIEngine:
                 self.stats["loss"] += 1
                 self.stats["streak"] = 0
             db.save_stats(self.stats)
-    
+
     def _learn(self, actual):
-        """AI học từ kết quả thực tế"""
+        """AI học từ kết quả thực tế - ĐÃ FIX"""
         if not self.last:
             return
-        
+
+        # KIỂM TRA: đã học phiên này chưa?
+        session_id = self.last.get("session")
+        if session_id in self._learned_sessions:
+            return  # Đã học rồi, bỏ qua
+
+        # Đánh dấu đã học
+        self._learned_sessions.add(session_id)
+
         self.prediction_count += 1
-        
+
         # Cập nhật trọng số thuật toán
         for name, pred in self.last.get("details", {}).items():
             if name in self.weights:
@@ -710,17 +785,17 @@ class AIEngine:
                     self.weights[name] = min(2.5, self.weights[name] * (1 + self.learning_rate))
                 else:
                     self.weights[name] = max(0.2, self.weights[name] * (1 - self.learning_rate * 0.8))
-        
+
         # Lưu vào bộ nhớ AI
         self.memory.append({
-            "session": self.last["session"],
+            "session": session_id,
             "predicted": self.last["result"],
             "actual": actual,
             "confidence": self.last.get("confidence", 50),
             "timestamp": datetime.now().isoformat()
         })
         db.save_ai_memory(self.memory)
-        
+
         # Học pattern mới
         if len(self.history) >= 5:
             pattern_key = "".join([h["result"] for h in self.history[-5:]])
@@ -728,16 +803,15 @@ class AIEngine:
                 self.pattern_db[pattern_key] = {TAI: 0, XIU: 0}
             self.pattern_db[pattern_key][actual] += 1
             db.save_pattern(pattern_key, self.pattern_db[pattern_key])
-    
+
     def predict(self):
         if not self.history:
             return None
-        
+
         votes = {TAI: 0.0, XIU: 0.0}
         details = {}
         per_algo = []
-        
-        # Lấy dự đoán từ tất cả thuật toán
+
         for name, fn in ALGOS:
             try:
                 res, conf = fn(self.history)
@@ -747,14 +821,12 @@ class AIEngine:
                 per_algo.append((name, res, conf))
             except Exception as e:
                 per_algo.append((name, "ERR", 0))
-        
-        # Áp dụng AI Memory để điều chỉnh
+
         if len(self.memory) >= 10:
             memory_boost = self._get_memory_boost()
             for res, boost in memory_boost.items():
                 votes[res] += boost
-        
-        # Áp dụng Pattern Database
+
         if len(self.history) >= 5:
             pattern_key = "".join([h["result"] for h in self.history[-5:]])
             if pattern_key in self.pattern_db:
@@ -763,8 +835,7 @@ class AIEngine:
                 if total > 0:
                     votes[TAI] += p[TAI] / total * 0.15
                     votes[XIU] += p[XIU] / total * 0.15
-        
-        # Tổng hợp kết quả
+
         total_votes = votes[TAI] + votes[XIU]
         if total_votes == 0:
             winner = TAI
@@ -772,16 +843,16 @@ class AIEngine:
         else:
             winner = TAI if votes[TAI] >= votes[XIU] else XIU
             confidence = int((votes[winner] / total_votes) * 100)
-        
+
         confidence = min(97, max(50, confidence))
-        
+
         self.last = {
             "session": self.history[-1]["session"] + 1,
             "result": winner,
             "details": details,
             "confidence": confidence
         }
-        
+
         return {
             "winner": winner,
             "conf": confidence,
@@ -793,33 +864,27 @@ class AIEngine:
             "algo_count": len([a for a in per_algo if a[1] != "ERR"]),
             "memory_size": len(self.memory)
         }
-    
+
     def _get_memory_boost(self):
-        """Tính toán boost từ bộ nhớ AI"""
         boost = {TAI: 0.0, XIU: 0.0}
         recent = self.memory[-20:] if len(self.memory) >= 20 else self.memory
-        
-        # Thống kê độ chính xác gần đây
         correct = sum(1 for m in recent if m["predicted"] == m["actual"])
         if len(recent) > 0:
             accuracy = correct / len(recent)
             if accuracy > 0.6:
-                # Nếu AI đang chính xác, tăng cường dự đoán
                 last_pred = recent[-1]["predicted"] if recent else None
                 if last_pred:
                     boost[last_pred] += 0.1 * (accuracy - 0.5)
-        
         return boost
-    
+
     @property
     def wr(self):
         return round(self.stats["win"] / self.stats["total"] * 100, 1) if self.stats["total"] else 0
 
-# Khởi tạo AI Engine
 engine = AIEngine()
 
 # ═══════════════════════════════════════════════════════════════════
-#  BACKGROUND SYNC TỐI ƯU
+#  BACKGROUND SYNC
 # ═══════════════════════════════════════════════════════════════════
 def bg_sync():
     while True:
@@ -835,7 +900,7 @@ def bg_sync():
 threading.Thread(target=bg_sync, daemon=True).start()
 
 # ═══════════════════════════════════════════════════════════════════
-#  GIAO DIỆN ĐẸP - UI CAO CẤP
+#  GIAO DIỆN ĐẸP
 # ═══════════════════════════════════════════════════════════════════
 def bar(p, w=16):
     f = int(p / 100 * w)
@@ -877,7 +942,7 @@ def home_msg(uid):
     )
 
 # ═══════════════════════════════════════════════════════════════════
-#  HANDLERS - XỬ LÝ LỆNH
+#  HANDLERS
 # ═══════════════════════════════════════════════════════════════════
 async def start(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     uid = update.effective_user.id
@@ -911,8 +976,7 @@ async def callback(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     await q.answer()
     uid = q.from_user.id
     data = q.data
-    
-    # ─── ADMIN ACTIONS ──────────────────────────────────────────
+
     if data in ("mk7", "mk30", "mk90"):
         if uid not in ADMIN_IDS:
             await q.edit_message_text("❌ Không có quyền")
@@ -925,9 +989,10 @@ async def callback(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
             reply_markup=admin_keyboard()
         )
         return
-    
+
     if data == "listkeys":
-        if uid not in ADMIN_IDS: return
+        if uid not in ADMIN_IDS:
+            return
         lines = ["📋 **DANH SÁCH KEY**\n"]
         for k, v in list(db.get_keys().items())[-20:]:
             exp = datetime.fromisoformat(v["expire"]).strftime("%d/%m")
@@ -939,9 +1004,10 @@ async def callback(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
             reply_markup=admin_keyboard()
         )
         return
-    
+
     if data == "listusers":
-        if uid not in ADMIN_IDS: return
+        if uid not in ADMIN_IDS:
+            return
         lines = ["👥 **DANH SÁCH USER**\n"]
         for u, v in db.get_users().items():
             exp = datetime.fromisoformat(v["expire"]).strftime("%d/%m")
@@ -952,9 +1018,10 @@ async def callback(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
             reply_markup=admin_keyboard()
         )
         return
-    
+
     if data == "aimemory":
-        if uid not in ADMIN_IDS: return
+        if uid not in ADMIN_IDS:
+            return
         mem = engine.memory[-20:] if engine.memory else []
         lines = ["🧠 **AI MEMORY (20 gần nhất)**\n"]
         for m in reversed(mem):
@@ -966,7 +1033,7 @@ async def callback(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
             reply_markup=admin_keyboard()
         )
         return
-    
+
     if data == "home":
         await q.edit_message_text(
             home_msg(uid),
@@ -974,8 +1041,7 @@ async def callback(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
             parse_mode=ParseMode.MARKDOWN
         )
         return
-    
-    # ─── CHECK USER ────────────────────────────────────────────
+
     if not is_valid(uid):
         await q.edit_message_text(
             "🔒 **CHƯA KÍCH HOẠT / HẾT HẠN**\n\n"
@@ -987,8 +1053,7 @@ async def callback(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
             ])
         )
         return
-    
-    # ─── DỰ ĐOÁN ──────────────────────────────────────────────
+
     if data == "pred":
         pred = engine.predict()
         if not pred:
@@ -999,14 +1064,14 @@ async def callback(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
                 ])
             )
             return
-        
+
         winner_emoji = "🔴" if pred["winner"] == TAI else "🔵"
         winner_name = "TÀI" if pred["winner"] == TAI else "XỈU"
-        
+
         txt = (
             f"╔══════════════════════════════╗\n"
             f"║    🎯 KẾT QUẢ DỰ ĐOÁN 🎯    ║\n"
-            f"║      CAO FPS AI v3.0        ║\n"
+            f"║      CAO FPS AI v3.1        ║\n"
             f"╚══════════════════════════════╝\n\n"
             f"📌 Phiên trước : `{pred['last']['session']}` → "
             f"{'🔴 TÀI' if pred['last']['result'] == TAI else '🔵 XỈU'}\n"
@@ -1022,7 +1087,7 @@ async def callback(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
             f"⚡ Số Algo: **{pred['algo_count']}**/35\n"
             f"🕐 {datetime.now().strftime('%H:%M:%S')}"
         )
-        
+
         await q.edit_message_text(
             txt,
             parse_mode=ParseMode.MARKDOWN,
@@ -1033,8 +1098,7 @@ async def callback(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
             ])
         )
         return
-    
-    # ─── THỐNG KÊ ──────────────────────────────────────────────
+
     if data == "stats":
         s = engine.stats
         txt = (
@@ -1058,8 +1122,7 @@ async def callback(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
             ])
         )
         return
-    
-    # ─── ALGO CHI TIẾT ─────────────────────────────────────────
+
     if data == "algo":
         pred = engine.predict()
         if not pred:
@@ -1070,20 +1133,20 @@ async def callback(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
                 ])
             )
             return
-        
+
         lines = ["🧠 **35 THUẬT TOÁN CHI TIẾT**\n"]
         lines.append(f"{'ALGO':<10} {'KQ':<6} {'CONF':>5} {'W':>4}")
         lines.append("─" * 28)
-        
+
         for name, res, conf in pred["per_algo"][:20]:
             r_str = "🔴T" if res == TAI else ("🔵X" if res == XIU else "💤")
             w = engine.weights.get(name, 1.0)
             lines.append(f"{name:<10} {r_str}  {conf:>3}% {w:>4.1f}")
-        
+
         lines.append("\n" + "─" * 28)
         lines.append(f"📊 Ensemble: {pred['winner']} | {pred['conf']}%")
         lines.append(f"🧠 AI Memory: {pred['memory_size']}")
-        
+
         await q.edit_message_text(
             "\n".join(lines),
             parse_mode=ParseMode.MARKDOWN,
@@ -1093,8 +1156,7 @@ async def callback(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
             ])
         )
         return
-    
-    # ─── LỊCH SỬ ──────────────────────────────────────────────
+
     if data == "hist":
         hist = engine.history[-15:] if engine.history else []
         if not hist:
@@ -1105,12 +1167,12 @@ async def callback(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
                 ])
             )
             return
-        
+
         lines = ["📋 **15 PHIÊN GẦN NHẤT**\n"]
         for h in reversed(hist):
             r = "🔴 TÀI" if h["result"] == TAI else "🔵 XỈU"
             lines.append(f"#{h['session']}  {r}")
-        
+
         await q.edit_message_text(
             "\n".join(lines),
             parse_mode=ParseMode.MARKDOWN,
@@ -1120,8 +1182,7 @@ async def callback(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
             ])
         )
         return
-    
-    # ─── TÀI KHOẢN ─────────────────────────────────────────────
+
     if data == "account":
         u = db.get_users().get(str(uid))
         if uid in ADMIN_IDS:
@@ -1150,8 +1211,7 @@ async def callback(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
             ])
         )
         return
-    
-    # ─── TRẠNG THÁI ────────────────────────────────────────────
+
     if data == "status":
         txt = (
             f"⚡ **CAO FPS STATUS**\n\n"
@@ -1186,34 +1246,69 @@ async def message(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         )
 
 # ═══════════════════════════════════════════════════════════════════
+#  WEB SERVER CHO RENDER
+# ═══════════════════════════════════════════════════════════════════
+import http.server
+import socketserver
+
+PORT = int(os.environ.get('PORT', 10000))
+
+class HealthCheckHandler(http.server.SimpleHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.send_header('Content-type', 'text/plain; charset=utf-8')
+        self.end_headers()
+        self.wfile.write(b"CAO FPS Bot is running!")
+
+    def log_message(self, format, *args):
+        pass
+
+def run_web_server():
+    try:
+        with socketserver.TCPServer(("0.0.0.0", PORT), HealthCheckHandler) as httpd:
+            print(f"🌐 Web server đang chạy trên cổng {PORT}")
+            httpd.serve_forever()
+    except Exception as e:
+        print(f"⚠️ Lỗi web server: {e}")
+
+# ═══════════════════════════════════════════════════════════════════
 #  MAIN - KHỞI CHẠY
 # ═══════════════════════════════════════════════════════════════════
 def main():
     print("═" * 50)
-    print("  ⚡ CAO FPS PREDICTOR v3.0 ⚡")
+    print("  ⚡ CAO FPS PREDICTOR v3.1 ⚡")
     print("  35 Thuật Toán | AI Học Tăng Cường")
-    print("  Phân Tích 30-30 Phiên | Render Optimized")
+    print("  Web Server + Polling | Render Optimized")
     print("  HQuanz Studio")
     print("═" * 50)
-    
-    # Load dữ liệu ban đầu
+
+    # Khởi động Web Server
+    web_thread = threading.Thread(target=run_web_server, daemon=True)
+    web_thread.start()
+    print(f"  🌐 Web server thread đã khởi động (port {PORT})")
+
+    # Load dữ liệu
     hist = fetch_history()
     if hist:
         engine.update(hist)
         print(f"  ✅ Loaded {len(hist)} phiên lịch sử")
         print(f"  🧠 AI Memory: {len(engine.memory)}")
         print(f"  📊 Win Rate: {engine.wr}%")
-    
-    # Build application
+
+    # Khởi tạo bot
     app = ApplicationBuilder().token(BOT_TOKEN).build()
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("admin", admin))
     app.add_handler(CommandHandler("key", key))
     app.add_handler(CallbackQueryHandler(callback))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, message))
-    
-    print("  🚀 Bot đang chạy...")
-    app.run_polling()
+
+    print("  🚀 Bot Telegram đang chạy...")
+
+    try:
+        app.run_polling()
+    except Exception as e:
+        print(f"❌ Lỗi bot: {e}")
 
 if __name__ == "__main__":
     main()
