@@ -1,16 +1,8 @@
 #!/usr/bin/env python3
 # ═══════════════════════════════════════════════════════════════════
-#   TOOL LC79 AI - SIÊU BOT DỰ ĐOÁN TÀI XỈU
-#   Version: 4.0 | 60 Thuật Toán + AI Học Tăng Cường
-#   Phân Tích 30-30 Phiên | Render Optimized
-#   HQuanz Studio
-# ═══════════════════════════════════════════════════════════════════
-
-#!/usr/bin/env python3
-# ═══════════════════════════════════════════════════════════════════
 #   TOOL BACCARAT AI - ĐA SẢNH SIÊU VIP
-#   Version: 5.0 | 60 Thuật Toán | Phân Tích P/B/T
-#   Hỗ trợ nhiều sảnh | AI Học Tăng Cường
+#   Version: 5.1 | 60 Thuật Toán | Phân Tích P/B/T
+#   Hỗ trợ nhiều sảnh | AI Học Tăng Cường | FIX CHỌN SẢNH
 #   HQuanz Studio
 # ═══════════════════════════════════════════════════════════════════
 
@@ -79,7 +71,7 @@ class SmartDB:
             "ai_memory": [],
             "pattern_db": {},
             "user_activity": {},
-            "tables": {}  # Lưu thông tin các sảnh
+            "tables": {}
         }
     
     def _save(self):
@@ -244,23 +236,6 @@ def opp(r):
     elif r == BANKER:
         return PLAYER
     return TIE
-
-# ─── CHUYỂN ĐỔI TỪ TX SANG BACCARAT ────────────────────────────
-def map_to_tx(result):
-    """Map Baccarat sang TX để tận dụng thuật toán cũ"""
-    if result == PLAYER:
-        return "T"  # Tài
-    elif result == BANKER:
-        return "X"  # Xỉu
-    return "T"  # Tie thì mặc định Tài
-
-def map_to_baccarat(result):
-    """Map TX sang Baccarat"""
-    if result == "T":
-        return PLAYER
-    elif result == "X":
-        return BANKER
-    return PLAYER
 
 # ─── THUẬT TOÁN CƠ BẢN (1-10) ──────────────────────────────────
 def a1_basic(hist):
@@ -793,18 +768,15 @@ def a35_nnsim(hist):
 
 # ─── THUẬT TOÁN ĐẶC BIỆT CHO BACCARAT (36-45) ─────────────────
 def a36_pattern_PB(hist):
-    """Phân tích pattern P/B cụ thể"""
     if len(hist) < 10:
         return hist[-1] if hist else PLAYER, 55
     r = hist[-10:]
-    # Đếm số lần P/B xen kẽ
     changes = sum(1 for i in range(1, len(r)) if r[i] != r[i-1] and r[i] != TIE and r[i-1] != TIE)
     if changes >= 7:
         return opp(r[-1]), 70
     return r[-1], 58
 
 def a37_streak_analyzer(hist):
-    """Phân tích chuỗi dài"""
     if len(hist) < 20:
         return hist[-1] if hist else PLAYER, 55
     r = hist[-20:]
@@ -821,7 +793,6 @@ def a37_streak_analyzer(hist):
     return r[-1], 58
 
 def a38_banker_bias(hist):
-    """Phân tích bias Banker"""
     if len(hist) < 20:
         return hist[-1] if hist else PLAYER, 55
     r = hist[-20:]
@@ -834,7 +805,6 @@ def a38_banker_bias(hist):
     return hist[-1], 55
 
 def a39_player_bias(hist):
-    """Phân tích bias Player"""
     if len(hist) < 20:
         return hist[-1] if hist else PLAYER, 55
     r = hist[-20:]
@@ -847,23 +817,19 @@ def a39_player_bias(hist):
     return hist[-1], 55
 
 def a40_tie_pattern(hist):
-    """Phân tích Tie (Hòa)"""
     if len(hist) < 20:
         return hist[-1] if hist else PLAYER, 55
     r = hist[-20:]
     ties = r.count(TIE)
     if ties >= 3:
-        # Nếu nhiều Tie, dự đoán P/B đảo chiều
         last_non_tie = next((x for x in reversed(r) if x != TIE), PLAYER)
         return opp(last_non_tie), int(60 + ties*3)
     return hist[-1], 55
 
 def a41_trend_oscillator(hist):
-    """Dao động xu hướng"""
     if len(hist) < 15:
         return hist[-1] if hist else PLAYER, 55
     r = hist[-15:]
-    # Tính xu hướng
     p_count = r.count(PLAYER)
     b_count = r.count(BANKER)
     if p_count > b_count:
@@ -876,11 +842,9 @@ def a41_trend_oscillator(hist):
         return BANKER, 62
 
 def a42_candle_pattern(hist):
-    """Pattern nến giả lập"""
     if len(hist) < 10:
         return hist[-1] if hist else PLAYER, 55
     r = hist[-10:]
-    # Tìm pattern 3 cây nến
     if len(r) >= 3:
         if r[-3] == PLAYER and r[-2] == BANKER and r[-1] == PLAYER:
             return BANKER, 72
@@ -889,22 +853,18 @@ def a42_candle_pattern(hist):
     return r[-1], 58
 
 def a43_wave_analysis(hist):
-    """Phân tích sóng"""
     if len(hist) < 15:
         return hist[-1] if hist else PLAYER, 55
     r = hist[-15:]
-    # Đếm số lần đổi chiều
     turns = sum(1 for i in range(2, len(r)) if r[i] != r[i-1] and r[i-1] != r[i-2] and r[i] != TIE and r[i-1] != TIE)
     if turns >= 5:
         return opp(r[-1]), 68
     return r[-1], 55
 
 def a44_parallel_streak(hist):
-    """Song song streak"""
     if len(hist) < 20:
         return hist[-1] if hist else PLAYER, 55
     r = hist[-20:]
-    # Tìm 2 chuỗi song song
     streaks = []
     current = 1
     for i in range(1, len(r)):
@@ -922,7 +882,6 @@ def a44_parallel_streak(hist):
     return r[-1], 58
 
 def a45_momentum_reversal(hist):
-    """Đảo chiều đà"""
     if len(hist) < 10:
         return hist[-1] if hist else PLAYER, 55
     r = hist[-10:]
@@ -1154,7 +1113,7 @@ ALGOS = [
 ]
 
 # ═══════════════════════════════════════════════════════════════════
-#  AI ENGINE - HỌC TỪ DỰ ĐOÁN
+#  AI ENGINE - HỌC TỪ DỰ ĐOÁN (FIX CHỌN SẢNH)
 # ═══════════════════════════════════════════════════════════════════
 class AIEngine:
     def __init__(self):
@@ -1171,30 +1130,55 @@ class AIEngine:
         self.tables_data = {}
 
     def update_tables(self, data):
-        """Cập nhật dữ liệu các sảnh"""
+        """Cập nhật dữ liệu các sảnh - FIX"""
         if not data:
             return
-        self.tables_data = data
-        db.save_tables(data)
+        # Lưu dữ liệu sảnh
+        self.tables_data = {}
+        for table in data:
+            table_name = table.get("table_name")
+            if table_name:
+                self.tables_data[table_name] = table
         
-        # Cập nhật history cho bảng đang chọn
-        if self.current_table:
-            for table in data:
-                if table.get("table_name") == self.current_table:
-                    full_map = table.get("full_map", "")
-                    self.update_history_from_map(full_map, table.get("round", 0))
-                    break
+        db.save_tables(self.tables_data)
+        
+        # Cập nhật lịch sử cho sảnh đang chọn
+        if self.current_table and self.current_table in self.tables_data:
+            full_map = self.tables_data[self.current_table].get("full_map", "")
+            if full_map:
+                self.history = list(full_map)
+                print(f"✅ Cập nhật sảnh {self.current_table}: {len(self.history)} ván")
+
+    def select_table(self, table_name):
+        """Chọn sảnh và cập nhật lịch sử - FIX"""
+        self.current_table = table_name
+        
+        # Lấy từ tables_data đã lưu
+        if table_name in self.tables_data:
+            full_map = self.tables_data[table_name].get("full_map", "")
+            if full_map:
+                self.history = list(full_map)
+                return True
+        
+        # Fallback: lấy từ database
+        tables = db.get_tables()
+        if table_name in tables:
+            full_map = tables[table_name].get("full_map", "")
+            if full_map:
+                self.history = list(full_map)
+                return True
+        
+        self.history = []
+        return False
 
     def update_history_from_map(self, full_map, round_num):
         """Cập nhật lịch sử từ full_map"""
         if not full_map:
             return
-        # Chuyển đổi chuỗi thành list các kết quả
         new_history = list(full_map)
         old_last = self.history[-1] if self.history else None
         self.history = new_history
         
-        # Kiểm tra dự đoán cũ
         if self.last and old_last and len(self.history) > 0:
             actual = self.history[-1]
             self._learn(actual)
@@ -1243,14 +1227,9 @@ class AIEngine:
             db.save_pattern(pattern_key, self.pattern_db[pattern_key])
 
     def predict(self, table_name=None):
-        """Dự đoán cho sảnh cụ thể"""
-        if table_name and table_name != self.current_table:
-            self.current_table = table_name
-            # Load dữ liệu cho sảnh mới
-            tables = db.get_tables()
-            if table_name in tables:
-                full_map = tables[table_name].get("full_map", "")
-                self.history = list(full_map)
+        """Dự đoán cho sảnh cụ thể - FIX"""
+        if table_name:
+            self.select_table(table_name)
 
         if not self.history:
             return None
@@ -1561,6 +1540,13 @@ async def callback(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     if data == "tables":
         tables = db.get_tables()
         if not tables:
+            # Thử fetch lại
+            data = fetch_baccarat_data()
+            if data:
+                engine.update_tables(data)
+                tables = db.get_tables()
+        
+        if not tables:
             await q.edit_message_text(
                 "⏳ Đang tải dữ liệu sảnh...\nVui lòng thử lại sau.",
                 reply_markup=InlineKeyboardMarkup([
@@ -1572,7 +1558,6 @@ async def callback(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         
         lines = ["📋 **DANH SÁCH SẢNH BACCARAT**\n"]
         for table_name, info in list(tables.items())[:20]:
-            full_map = info.get("full_map", "")
             result = info.get("result", "?")
             dealer = info.get("dealer_name", "Unknown")
             round_num = info.get("round", 0)
@@ -1582,7 +1567,6 @@ async def callback(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         lines.append(f"\n📌 Tổng: {len(tables)} sảnh")
         lines.append("💡 Chọn sảnh để dự đoán:")
         
-        # Tạo inline keyboard cho các sảnh
         keyboard = []
         for table_name in list(tables.keys())[:15]:
             keyboard.append([InlineKeyboardButton(table_name, callback_data=f"table_{table_name}")])
@@ -1596,28 +1580,45 @@ async def callback(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         )
         return
 
-    # ─── CHỌN SẢNH ─────────────────────────────────────────────
+    # ─── CHỌN SẢNH - FIX ──────────────────────────────────────
     if data.startswith("table_"):
         table_name = data.replace("table_", "")
-        engine.current_table = table_name
         
-        # Load dữ liệu sảnh
-        tables = db.get_tables()
-        if table_name in tables:
-            full_map = tables[table_name].get("full_map", "")
-            engine.history = list(full_map)
+        # Fetch dữ liệu mới nhất
+        data = fetch_baccarat_data()
+        if data:
+            engine.update_tables(data)
+        
+        # Chọn sảnh và cập nhật lịch sử
+        if engine.select_table(table_name):
+            # Lấy thông tin sảnh từ tables_data
+            table_info = engine.tables_data.get(table_name, {})
+            result = table_info.get("result", "?")
+            dealer = table_info.get("dealer_name", "Unknown")
             
-        await q.edit_message_text(
-            f"✅ Đã chọn sảnh: **{table_name}**\n\n"
-            f"📊 Lịch sử: {len(engine.history)} ván\n"
-            f"📌 Dùng nút DỰ ĐOÁN để xem kết quả",
-            parse_mode=ParseMode.MARKDOWN,
-            reply_markup=InlineKeyboardMarkup([
-                [InlineKeyboardButton("🎯 DỰ ĐOÁN NGAY", callback_data="pred"),
-                 InlineKeyboardButton("📋 LỊCH SỬ", callback_data="hist")],
-                [InlineKeyboardButton("🏠 HOME", callback_data="home")]
-            ])
-        )
+            await q.edit_message_text(
+                f"✅ Đã chọn sảnh: **{table_name}**\n\n"
+                f"🎰 Nhà cái: {dealer}\n"
+                f"📊 Lịch sử: {len(engine.history)} ván\n"
+                f"📌 Ván gần nhất: {result_emoji(result) if result != '?' else 'Chưa có'}\n\n"
+                f"Dùng nút DỰ ĐOÁN để xem kết quả",
+                parse_mode=ParseMode.MARKDOWN,
+                reply_markup=InlineKeyboardMarkup([
+                    [InlineKeyboardButton("🎯 DỰ ĐOÁN NGAY", callback_data="pred"),
+                     InlineKeyboardButton("📋 LỊCH SỬ", callback_data="hist")],
+                    [InlineKeyboardButton("🏠 HOME", callback_data="home")]
+                ])
+            )
+        else:
+            await q.edit_message_text(
+                f"⚠️ Sảnh **{table_name}** chưa có dữ liệu\n"
+                f"Vui lòng thử lại sau.",
+                parse_mode=ParseMode.MARKDOWN,
+                reply_markup=InlineKeyboardMarkup([
+                    [InlineKeyboardButton("📋 DANH SÁCH SẢNH", callback_data="tables"),
+                     InlineKeyboardButton("🏠 HOME", callback_data="home")]
+                ])
+            )
         return
 
     # ─── AI LEARNING INFO ──────────────────────────────────────
@@ -1661,9 +1662,10 @@ async def callback(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         pred = engine.predict()
         if not pred:
             await q.edit_message_text(
-                "⏳ Đang tải dữ liệu...",
+                "⏳ Đang tải dữ liệu...\nVui lòng thử lại sau.",
                 reply_markup=InlineKeyboardMarkup([
-                    [InlineKeyboardButton("🔄 Thử lại", callback_data="pred")]
+                    [InlineKeyboardButton("🔄 Thử lại", callback_data="pred"),
+                     InlineKeyboardButton("🏠 HOME", callback_data="home")]
                 ])
             )
             return
@@ -1739,7 +1741,7 @@ async def callback(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         pred = engine.predict()
         if not pred:
             await q.edit_message_text(
-                "⏳ Chưa có dữ liệu",
+                "⏳ Chưa có dữ liệu\nVui lòng chọn sảnh trước.",
                 reply_markup=InlineKeyboardMarkup([
                     [InlineKeyboardButton("🏠 HOME", callback_data="home")]
                 ])
@@ -1771,12 +1773,23 @@ async def callback(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
 
     # ─── LỊCH SỬ ──────────────────────────────────────────────
     if data == "hist":
+        if not engine.current_table:
+            await q.edit_message_text(
+                "⚠️ Vui lòng chọn sảnh trước\nDùng nút `📋 DANH SÁCH SẢNH`",
+                parse_mode=ParseMode.MARKDOWN,
+                reply_markup=InlineKeyboardMarkup([
+                    [InlineKeyboardButton("📋 DANH SÁCH SẢNH", callback_data="tables"),
+                     InlineKeyboardButton("🏠 HOME", callback_data="home")]
+                ])
+            )
+            return
+            
         hist = engine.history[-15:] if engine.history else []
         if not hist:
             await q.edit_message_text(
-                "⏳ Chưa có lịch sử\nVui lòng chọn sảnh trước.",
+                "⏳ Chưa có lịch sử cho sảnh này",
                 reply_markup=InlineKeyboardMarkup([
-                    [InlineKeyboardButton("📋 DANH SÁCH SẢNH", callback_data="tables"),
+                    [InlineKeyboardButton("🔄 Refresh", callback_data="hist"),
                      InlineKeyboardButton("🏠 HOME", callback_data="home")]
                 ])
             )
@@ -1922,7 +1935,7 @@ def run_web_server():
 # ═══════════════════════════════════════════════════════════════════
 def main():
     print("═" * 50)
-    print("  🔥 TOOL BACCARAT AI v5.0 🔥")
+    print("  🔥 TOOL BACCARAT AI v5.1 🔥")
     print("  60 THUẬT TOÁN SIÊU VIP")
     print("  HỖ TRỢ ĐA SẢNH | AI HỌC TỰ ĐỘNG")
     print("  RENDER OPTIMIZED | HQuanz Studio")
