@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 # ═══════════════════════════════════════════════════════════════════
 #   TOOL BACCARAT AI - ĐA SẢNH SIÊU VIP
-#   Version: 5.1 | 60 Thuật Toán | Phân Tích P/B/T
-#   Hỗ trợ nhiều sảnh | AI Học Tăng Cường | FIX CHỌN SẢNH
+#   Version: 6.0 | 60 THUẬT TOÁN FULL | AI TRAIN THEO SẢNH
+#   Lưu dữ liệu đúng/sai cho từng sảnh
 #   HQuanz Studio
 # ═══════════════════════════════════════════════════════════════════
 
@@ -48,10 +48,9 @@ DATA_FILE = "baccarat_data.json"
 # Cấu hình AI
 LEARNING_RATE = 0.01
 MEMORY_SIZE = 200
-DEEP_ANALYSIS = 30
 
 # ═══════════════════════════════════════════════════════════════════
-#  DATABASE THÔNG MINH (JSON)
+#  DATABASE THÔNG MINH (JSON) - NÂNG CẤP LƯU THEO SẢNH
 # ═══════════════════════════════════════════════════════════════════
 class SmartDB:
     def __init__(self):
@@ -71,7 +70,8 @@ class SmartDB:
             "ai_memory": [],
             "pattern_db": {},
             "user_activity": {},
-            "tables": {}
+            "tables": {},
+            "table_stats": {}  # Lưu thống kê cho từng sảnh
         }
     
     def _save(self):
@@ -101,6 +101,9 @@ class SmartDB:
     
     def get_tables(self):
         return self._data.get("tables", {})
+    
+    def get_table_stats(self):
+        return self._data.get("table_stats", {})
     
     def save_key(self, k, v):
         self._data["keys"][k] = v
@@ -133,6 +136,25 @@ class SmartDB:
         self._data["tables"] = tables
         self._save()
     
+    def update_table_stats(self, table_name, result, actual):
+        """Cập nhật thống kê cho từng sảnh"""
+        if table_name not in self._data["table_stats"]:
+            self._data["table_stats"][table_name] = {"total": 0, "win": 0, "loss": 0, "streak": 0, "best": 0}
+        
+        stats = self._data["table_stats"][table_name]
+        stats["total"] += 1
+        if result == actual:
+            stats["win"] += 1
+            stats["streak"] += 1
+            stats["best"] = max(stats["best"], stats["streak"])
+        else:
+            stats["loss"] += 1
+            stats["streak"] = 0
+        self._save()
+    
+    def get_table_stats(self, table_name):
+        return self._data["table_stats"].get(table_name, {"total": 0, "win": 0, "loss": 0, "streak": 0, "best": 0})
+    
     def log_user_activity(self, uid, action):
         if str(uid) not in self._data["user_activity"]:
             self._data["user_activity"][str(uid)] = []
@@ -147,7 +169,7 @@ class SmartDB:
 db = SmartDB()
 
 # ═══════════════════════════════════════════════════════════════════
-#  HỆ THỐNG KEY NÂNG CAO
+#  HỆ THỐNG KEY
 # ═══════════════════════════════════════════════════════════════════
 def gen_key(days, note=""):
     key = "BAC-" + uuid.uuid4().hex[:12].upper()
@@ -202,7 +224,7 @@ def expire_str(uid):
     return f"{exp.strftime('%d/%m/%Y')} (còn {days_left} ngày)"
 
 # ═══════════════════════════════════════════════════════════════════
-#  FETCH API BACCARAT
+#  FETCH API
 # ═══════════════════════════════════════════════════════════════════
 def fetch_baccarat_data():
     try:
@@ -210,7 +232,6 @@ def fetch_baccarat_data():
         with urllib.request.urlopen(req, timeout=10) as r:
             data = json.loads(r.read().decode())
             if data and isinstance(data, list):
-                # Lưu thông tin các sảnh
                 tables_info = {}
                 for table in data:
                     table_name = table.get("table_name", "Unknown")
@@ -223,14 +244,13 @@ def fetch_baccarat_data():
                 db.save_tables(tables_info)
                 return data
     except Exception as e:
-        print(f"⚠️ Lỗi fetch Baccarat API: {e}")
+        print(f"⚠️ Lỗi fetch API: {e}")
     return []
 
 # ═══════════════════════════════════════════════════════════════════
-#  60 THUẬT TOÁN BACCARAT
+#  60 THUẬT TOÁN BACCARAT (FULL)
 # ═══════════════════════════════════════════════════════════════════
 def opp(r):
-    """Đối lập Player/Banker"""
     if r == PLAYER:
         return BANKER
     elif r == BANKER:
@@ -766,7 +786,7 @@ def a35_nnsim(hist):
         return BANKER, int(65 + abs(weighted_sum)*20)
     return ("P" if r[-1] > 0 else "B" if r[-1] < 0 else "T"), 58
 
-# ─── THUẬT TOÁN ĐẶC BIỆT CHO BACCARAT (36-45) ─────────────────
+# ─── THUẬT TOÁN ĐẶC BIỆT (36-45) ─────────────────────────────
 def a36_pattern_PB(hist):
     if len(hist) < 10:
         return hist[-1] if hist else PLAYER, 55
@@ -1088,7 +1108,7 @@ def a60_adaptive_ensemble(hist):
         res, conf = a2_trend(hist)
         return res, conf
 
-# ─── DANH SÁCH 60 THUẬT TOÁN ────────────────────────────────────
+# ─── DANH SÁCH ĐỦ 60 THUẬT TOÁN ─────────────────────────────────
 ALGOS = [
     ("Basic", a1_basic), ("Trend", a2_trend), ("Imbalance", a3_imbalance),
     ("Short", a4_short), ("Weight", a5_weight), ("Break", a6_break),
@@ -1113,7 +1133,7 @@ ALGOS = [
 ]
 
 # ═══════════════════════════════════════════════════════════════════
-#  AI ENGINE - HỌC TỪ DỰ ĐOÁN (FIX CHỌN SẢNH)
+#  AI ENGINE - FIX: TRAIN ĐÚNG, LƯU THEO SẢNH, DÙNG 60 ALGO
 # ═══════════════════════════════════════════════════════════════════
 class AIEngine:
     def __init__(self):
@@ -1128,12 +1148,12 @@ class AIEngine:
         self._learned_sessions = set()
         self.current_table = None
         self.tables_data = {}
+        self.last_actual = None  # Lưu kết quả thực tế để train
 
     def update_tables(self, data):
-        """Cập nhật dữ liệu các sảnh - FIX"""
+        """Cập nhật dữ liệu các sảnh"""
         if not data:
             return
-        # Lưu dữ liệu sảnh
         self.tables_data = {}
         for table in data:
             table_name = table.get("table_name")
@@ -1142,25 +1162,31 @@ class AIEngine:
         
         db.save_tables(self.tables_data)
         
-        # Cập nhật lịch sử cho sảnh đang chọn
+        # Cập nhật lịch sử cho sảnh đang chọn và train AI
         if self.current_table and self.current_table in self.tables_data:
             full_map = self.tables_data[self.current_table].get("full_map", "")
+            result = self.tables_data[self.current_table].get("result", "")
             if full_map:
+                old_history = self.history.copy() if self.history else []
                 self.history = list(full_map)
+                
+                # Train AI nếu có kết quả mới
+                if result and old_history and len(self.history) > len(old_history):
+                    actual = result
+                    self._learn_from_actual(actual)
+                
                 print(f"✅ Cập nhật sảnh {self.current_table}: {len(self.history)} ván")
 
     def select_table(self, table_name):
-        """Chọn sảnh và cập nhật lịch sử - FIX"""
+        """Chọn sảnh và cập nhật lịch sử"""
         self.current_table = table_name
         
-        # Lấy từ tables_data đã lưu
         if table_name in self.tables_data:
             full_map = self.tables_data[table_name].get("full_map", "")
             if full_map:
                 self.history = list(full_map)
                 return True
         
-        # Fallback: lấy từ database
         tables = db.get_tables()
         if table_name in tables:
             full_map = tables[table_name].get("full_map", "")
@@ -1171,53 +1197,54 @@ class AIEngine:
         self.history = []
         return False
 
-    def update_history_from_map(self, full_map, round_num):
-        """Cập nhật lịch sử từ full_map"""
-        if not full_map:
-            return
-        new_history = list(full_map)
-        old_last = self.history[-1] if self.history else None
-        self.history = new_history
-        
-        if self.last and old_last and len(self.history) > 0:
-            actual = self.history[-1]
-            self._learn(actual)
-            self.stats["total"] += 1
-            hit = self.last["result"] == actual
-            if hit:
-                self.stats["win"] += 1
-                self.stats["streak"] += 1
-                self.stats["best"] = max(self.stats["best"], self.stats["streak"])
-            else:
-                self.stats["loss"] += 1
-                self.stats["streak"] = 0
-            db.save_stats(self.stats)
-
-    def _learn(self, actual):
+    def _learn_from_actual(self, actual):
+        """Học từ kết quả thực tế - FIX"""
         if not self.last:
             return
+        
         session_id = self.last.get("session")
         if session_id in self._learned_sessions:
             return
+        
         self._learned_sessions.add(session_id)
         self.prediction_count += 1
-
+        
+        # Cập nhật trọng số cho từng thuật toán
         for name, pred in self.last.get("details", {}).items():
             if name in self.weights:
                 if pred == actual:
                     self.weights[name] = min(2.5, self.weights[name] * (1 + self.learning_rate))
                 else:
                     self.weights[name] = max(0.2, self.weights[name] * (1 - self.learning_rate * 0.8))
-
+        
+        # Lưu vào bộ nhớ AI
         self.memory.append({
             "session": session_id,
+            "table": self.current_table,
             "predicted": self.last["result"],
             "actual": actual,
             "confidence": self.last.get("confidence", 50),
             "timestamp": datetime.now().isoformat()
         })
         db.save_ai_memory(self.memory)
-
+        
+        # Cập nhật thống kê toàn cục
+        self.stats["total"] += 1
+        hit = self.last["result"] == actual
+        if hit:
+            self.stats["win"] += 1
+            self.stats["streak"] += 1
+            self.stats["best"] = max(self.stats["best"], self.stats["streak"])
+        else:
+            self.stats["loss"] += 1
+            self.stats["streak"] = 0
+        db.save_stats(self.stats)
+        
+        # Cập nhật thống kê theo sảnh
+        if self.current_table:
+            db.update_table_stats(self.current_table, self.last["result"], actual)
+        
+        # Học pattern mới
         if len(self.history) >= 5:
             pattern_key = "".join(self.history[-5:])
             if pattern_key not in self.pattern_db:
@@ -1227,7 +1254,7 @@ class AIEngine:
             db.save_pattern(pattern_key, self.pattern_db[pattern_key])
 
     def predict(self, table_name=None):
-        """Dự đoán cho sảnh cụ thể - FIX"""
+        """Dự đoán - DÙNG ĐỦ 60 THUẬT TOÁN"""
         if table_name:
             self.select_table(table_name)
 
@@ -1238,14 +1265,15 @@ class AIEngine:
         details = {}
         per_algo = []
 
-        for name, fn in ALGOS[:40]:
+        # DÙNG ĐỦ 60 THUẬT TOÁN (không giới hạn)
+        for name, fn in ALGOS:
             try:
                 res, conf = fn(self.history)
                 weight = self.weights.get(name, 1.0)
                 votes[res] += weight * (conf / 100)
                 details[name] = res
                 per_algo.append((name, res, conf))
-            except:
+            except Exception as e:
                 per_algo.append((name, "ERR", 0))
 
         if len(self.memory) >= 10:
@@ -1308,6 +1336,13 @@ class AIEngine:
     @property
     def wr(self):
         return round(self.stats["win"] / self.stats["total"] * 100, 1) if self.stats["total"] else 0
+    
+    def get_table_wr(self, table_name):
+        """Lấy win rate cho từng sảnh"""
+        stats = db.get_table_stats(table_name)
+        total = stats.get("total", 0)
+        win = stats.get("win", 0)
+        return round(win / total * 100, 1) if total > 0 else 0
 
 engine = AIEngine()
 
@@ -1320,7 +1355,7 @@ def bg_sync():
             data = fetch_baccarat_data()
             if data:
                 engine.update_tables(data)
-                print(f"📡 Baccarat Sync: {len(data)} sảnh | AI Memory: {len(engine.memory)}")
+                print(f"📡 Sync: {len(data)} sảnh | Memory: {len(engine.memory)}")
         except Exception as e:
             print(f"⚠️ Sync error: {e}")
         time.sleep(SYNC_SEC)
@@ -1328,7 +1363,7 @@ def bg_sync():
 threading.Thread(target=bg_sync, daemon=True).start()
 
 # ═══════════════════════════════════════════════════════════════════
-#  GIAO DIỆN TOOL BACCARAT
+#  GIAO DIỆN
 # ═══════════════════════════════════════════════════════════════════
 def bar(p, w=18):
     f = int(p / 100 * w)
@@ -1363,28 +1398,29 @@ def admin_keyboard():
          InlineKeyboardButton("👥 LIST USER", callback_data="listusers")],
         [InlineKeyboardButton("🧠 AI MEMORY", callback_data="aimemory"),
          InlineKeyboardButton("📊 USER ACTIVITY", callback_data="useractivity")],
+        [InlineKeyboardButton("📊 TABLE STATS", callback_data="tablestats")],
         [InlineKeyboardButton("🔙 HOME", callback_data="home")],
     ])
 
 def home_msg(uid):
     return (
         "╔═══════════════════════════════════════╗\n"
-        "║   🔥 TOOL BACCARAT AI 🔥            ║\n"
-        "║   ⚡ 60 THUẬT TOÁN SIÊU VIP ⚡      ║\n"
-        "║   🧠 AI HỌC TỪ DỰ ĐOÁN             ║\n"
-        "║   📊 PHÂN TÍCH ĐA SẢNH             ║\n"
+        "║   🔥 TOOL BACCARAT AI v6.0 🔥       ║\n"
+        "║   ⚡ 60 THUẬT TOÁN FULL ⚡          ║\n"
+        "║   🧠 AI TRAIN THEO SẢNH            ║\n"
+        "║   📊 LƯU ĐÚNG/SAI TỪNG SẢNH        ║\n"
         "╚═══════════════════════════════════════╝\n\n"
         f"👤 ID: `{uid}`\n"
         f"⏰ Hết hạn: `{expire_str(uid)}`\n"
-        f"🧠 Bộ nhớ AI: {len(engine.memory)} dự đoán\n"
+        f"🧠 AI Memory: {len(engine.memory)} dự đoán\n"
         f"📊 Win Rate: {engine.wr}%\n"
         f"⚡ Thuật toán: 60/60\n"
         f"🎯 Sảnh hiện tại: `{engine.current_table or 'Chưa chọn'}`\n\n"
-        "⬇️ Chọn chức năng bên dưới:"
+        "⬇️ Chọn chức năng:"
     )
 
 # ═══════════════════════════════════════════════════════════════════
-#  HANDLERS - XỬ LÝ LỆNH
+#  HANDLERS
 # ═══════════════════════════════════════════════════════════════════
 async def start(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     uid = update.effective_user.id
@@ -1402,8 +1438,7 @@ async def admin(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         return
     db.log_user_activity(uid, "Mở admin panel")
     await update.message.reply_text(
-        "🛡️ **TOOL BACCARAT ADMIN PANEL**\n\n"
-        "📋 Quản lý key và người dùng:",
+        "🛡️ **ADMIN PANEL**\n\nQuản lý key và người dùng:",
         reply_markup=admin_keyboard(),
         parse_mode=ParseMode.MARKDOWN
     )
@@ -1422,7 +1457,7 @@ async def callback(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     uid = q.from_user.id
     data = q.data
 
-    # ─── ADMIN ACTIONS ──────────────────────────────────────────
+    # ─── ADMIN ──────────────────────────────────────────────────
     if data in ("mk7", "mk30", "mk90"):
         if uid not in ADMIN_IDS:
             await q.edit_message_text("❌ Không có quyền")
@@ -1431,7 +1466,7 @@ async def callback(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         key = gen_key(days)
         db.log_user_activity(uid, f"Tạo key {days} ngày: {key}")
         await q.edit_message_text(
-            f"✅ Đã tạo key {days} ngày:\n\n`{key}`\n\nGửi user dùng: `/key {key}`",
+            f"✅ Đã tạo key {days} ngày:\n\n`{key}`\n\nGửi user: `/key {key}`",
             parse_mode=ParseMode.MARKDOWN,
             reply_markup=admin_keyboard()
         )
@@ -1442,9 +1477,7 @@ async def callback(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
             await q.edit_message_text("❌ Không có quyền")
             return
         await q.edit_message_text(
-            "🗑️ **XÓA KEY**\n\n"
-            "Nhập key cần xóa theo format:\n"
-            "`/delkey BAC-XXXXXXXXXX`",
+            "🗑️ **XÓA KEY**\n\nNhập: `/delkey BAC-XXXXXXXXXX`",
             parse_mode=ParseMode.MARKDOWN,
             reply_markup=admin_keyboard()
         )
@@ -1461,7 +1494,7 @@ async def callback(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
             days = v.get("days", "?")
             lines.append(f"`{k}` — {exp} — {used} — {days}D")
         await q.edit_message_text(
-            "\n".join(lines) or "Chưa có key nào",
+            "\n".join(lines) or "Chưa có key",
             parse_mode=ParseMode.MARKDOWN,
             reply_markup=admin_keyboard()
         )
@@ -1477,7 +1510,7 @@ async def callback(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
             key = v.get("key", "N/A")[:12] + "..."
             lines.append(f"ID `{u}` — {exp} — Key: `{key}`")
         await q.edit_message_text(
-            "\n".join(lines) or "Chưa có user nào",
+            "\n".join(lines) or "Chưa có user",
             parse_mode=ParseMode.MARKDOWN,
             reply_markup=admin_keyboard()
         )
@@ -1490,7 +1523,7 @@ async def callback(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         lines = ["🧠 **AI MEMORY (25 gần nhất)**\n"]
         for m in reversed(mem):
             status = "✅" if m["predicted"] == m["actual"] else "❌"
-            lines.append(f"{status} #{m['session']} → {m['predicted']} vs {m['actual']} | {m['confidence']}%")
+            lines.append(f"{status} #{m['session']} {m.get('table', '')} → {m['predicted']} vs {m['actual']} | {m['confidence']}%")
         await q.edit_message_text(
             "\n".join(lines) or "Chưa có dữ liệu",
             parse_mode=ParseMode.MARKDOWN,
@@ -1515,6 +1548,24 @@ async def callback(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         )
         return
 
+    if data == "tablestats":
+        if uid not in ADMIN_IDS:
+            return
+        table_stats = db.get_table_stats()
+        lines = ["📊 **THỐNG KÊ TỪNG SẢNH**\n"]
+        for table_name, stats in list(table_stats.items())[:15]:
+            total = stats.get("total", 0)
+            win = stats.get("win", 0)
+            loss = stats.get("loss", 0)
+            wr = round(win / total * 100, 1) if total > 0 else 0
+            lines.append(f"`{table_name}` - T:{total} ✅{win} ❌{loss} | WR:{wr}%")
+        await q.edit_message_text(
+            "\n".join(lines) or "Chưa có dữ liệu",
+            parse_mode=ParseMode.MARKDOWN,
+            reply_markup=admin_keyboard()
+        )
+        return
+
     if data == "home":
         await q.edit_message_text(
             home_msg(uid),
@@ -1526,9 +1577,7 @@ async def callback(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     # ─── CHECK USER ────────────────────────────────────────────
     if not is_valid(uid):
         await q.edit_message_text(
-            "🔒 **CHƯA KÍCH HOẠT / HẾT HẠN**\n\n"
-            "Dùng lệnh:\n`/key BAC-XXXXXXXXXX`\n\n"
-            "Liên hệ admin để mua key.",
+            "🔒 **CHƯA KÍCH HOẠT**\n\nDùng: `/key BAC-XXXXXXXXXX`\nLiên hệ admin.",
             parse_mode=ParseMode.MARKDOWN,
             reply_markup=InlineKeyboardMarkup([
                 [InlineKeyboardButton("🏠 HOME", callback_data="home")]
@@ -1540,7 +1589,6 @@ async def callback(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     if data == "tables":
         tables = db.get_tables()
         if not tables:
-            # Thử fetch lại
             data = fetch_baccarat_data()
             if data:
                 engine.update_tables(data)
@@ -1548,7 +1596,7 @@ async def callback(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         
         if not tables:
             await q.edit_message_text(
-                "⏳ Đang tải dữ liệu sảnh...\nVui lòng thử lại sau.",
+                "⏳ Đang tải dữ liệu...",
                 reply_markup=InlineKeyboardMarkup([
                     [InlineKeyboardButton("🔄 Refresh", callback_data="tables"),
                      InlineKeyboardButton("🏠 HOME", callback_data="home")]
@@ -1556,17 +1604,17 @@ async def callback(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
             )
             return
         
-        lines = ["📋 **DANH SÁCH SẢNH BACCARAT**\n"]
+        lines = ["📋 **DANH SÁCH SẢNH**\n"]
         for table_name, info in list(tables.items())[:20]:
             result = info.get("result", "?")
             dealer = info.get("dealer_name", "Unknown")
             round_num = info.get("round", 0)
             emoji = "🟢" if result == PLAYER else "🔴" if result == BANKER else "⚪"
-            lines.append(f"{emoji} `{table_name}` - {dealer} - Ván: {round_num} - {result_emoji(result)}")
+            # Lấy WR của sảnh
+            wr = engine.get_table_wr(table_name)
+            lines.append(f"{emoji} `{table_name}` - {dealer} - Ván:{round_num} - {result_emoji(result)} - WR:{wr}%")
         
         lines.append(f"\n📌 Tổng: {len(tables)} sảnh")
-        lines.append("💡 Chọn sảnh để dự đoán:")
-        
         keyboard = []
         for table_name in list(tables.keys())[:15]:
             keyboard.append([InlineKeyboardButton(table_name, callback_data=f"table_{table_name}")])
@@ -1580,39 +1628,36 @@ async def callback(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         )
         return
 
-    # ─── CHỌN SẢNH - FIX ──────────────────────────────────────
+    # ─── CHỌN SẢNH ─────────────────────────────────────────────
     if data.startswith("table_"):
         table_name = data.replace("table_", "")
-        
-        # Fetch dữ liệu mới nhất
         data = fetch_baccarat_data()
         if data:
             engine.update_tables(data)
         
-        # Chọn sảnh và cập nhật lịch sử
         if engine.select_table(table_name):
-            # Lấy thông tin sảnh từ tables_data
             table_info = engine.tables_data.get(table_name, {})
             result = table_info.get("result", "?")
             dealer = table_info.get("dealer_name", "Unknown")
+            wr = engine.get_table_wr(table_name)
             
             await q.edit_message_text(
-                f"✅ Đã chọn sảnh: **{table_name}**\n\n"
+                f"✅ Đã chọn: **{table_name}**\n\n"
                 f"🎰 Nhà cái: {dealer}\n"
                 f"📊 Lịch sử: {len(engine.history)} ván\n"
-                f"📌 Ván gần nhất: {result_emoji(result) if result != '?' else 'Chưa có'}\n\n"
+                f"📌 Gần nhất: {result_emoji(result) if result != '?' else 'Chưa có'}\n"
+                f"📊 Win Rate: {wr}%\n\n"
                 f"Dùng nút DỰ ĐOÁN để xem kết quả",
                 parse_mode=ParseMode.MARKDOWN,
                 reply_markup=InlineKeyboardMarkup([
-                    [InlineKeyboardButton("🎯 DỰ ĐOÁN NGAY", callback_data="pred"),
+                    [InlineKeyboardButton("🎯 DỰ ĐOÁN", callback_data="pred"),
                      InlineKeyboardButton("📋 LỊCH SỬ", callback_data="hist")],
                     [InlineKeyboardButton("🏠 HOME", callback_data="home")]
                 ])
             )
         else:
             await q.edit_message_text(
-                f"⚠️ Sảnh **{table_name}** chưa có dữ liệu\n"
-                f"Vui lòng thử lại sau.",
+                f"⚠️ Sảnh **{table_name}** chưa có dữ liệu",
                 parse_mode=ParseMode.MARKDOWN,
                 reply_markup=InlineKeyboardMarkup([
                     [InlineKeyboardButton("📋 DANH SÁCH SẢNH", callback_data="tables"),
@@ -1621,19 +1666,20 @@ async def callback(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
             )
         return
 
-    # ─── AI LEARNING INFO ──────────────────────────────────────
+    # ─── AI LEARNING ────────────────────────────────────────────
     if data == "ai_learn":
         mem = engine.memory[-20:] if engine.memory else []
         correct = sum(1 for m in mem if m["predicted"] == m["actual"]) if mem else 0
         accuracy = round(correct / len(mem) * 100, 1) if mem else 0
         txt = (
-            f"🤖 **AI LEARNING STATUS**\n\n"
+            f"🤖 **AI TRAIN STATUS**\n\n"
             f"📊 Memory: {len(engine.memory)} dự đoán\n"
-            f"🎯 Accuracy: {accuracy}% (20 gần nhất)\n"
+            f"🎯 Accuracy: {accuracy}% (20 gần)\n"
             f"⚡ Win Rate: {engine.wr}%\n"
-            f"🧠 Learned sessions: {len(engine._learned_sessions)}\n"
-            f"📈 Prediction count: {engine.prediction_count}\n\n"
-            f"🔄 Tự động học từ mỗi phiên dự đoán"
+            f"🧠 Learned: {len(engine._learned_sessions)}\n"
+            f"📈 Count: {engine.prediction_count}\n"
+            f"🎯 Sảnh: {engine.current_table or 'Chưa chọn'}\n\n"
+            f"🔄 Tự động học từ mỗi ván"
         )
         await q.edit_message_text(
             txt,
@@ -1649,8 +1695,7 @@ async def callback(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     if data == "pred":
         if not engine.current_table:
             await q.edit_message_text(
-                "⚠️ **VUI LÒNG CHỌN SẢNH TRƯỚC**\n\n"
-                "Dùng nút `📋 DANH SÁCH SẢNH` để chọn.",
+                "⚠️ Vui lòng chọn sảnh trước!",
                 parse_mode=ParseMode.MARKDOWN,
                 reply_markup=InlineKeyboardMarkup([
                     [InlineKeyboardButton("📋 DANH SÁCH SẢNH", callback_data="tables"),
@@ -1662,25 +1707,26 @@ async def callback(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         pred = engine.predict()
         if not pred:
             await q.edit_message_text(
-                "⏳ Đang tải dữ liệu...\nVui lòng thử lại sau.",
+                "⏳ Đang tải dữ liệu...",
                 reply_markup=InlineKeyboardMarkup([
-                    [InlineKeyboardButton("🔄 Thử lại", callback_data="pred"),
-                     InlineKeyboardButton("🏠 HOME", callback_data="home")]
+                    [InlineKeyboardButton("🔄 Thử lại", callback_data="pred")]
                 ])
             )
             return
 
         winner_emoji = "🔵" if pred["winner"] == PLAYER else "🔴" if pred["winner"] == BANKER else "⚪"
         winner_name = "PLAYER" if pred["winner"] == PLAYER else "BANKER" if pred["winner"] == BANKER else "TIE"
+        wr = engine.get_table_wr(engine.current_table)
 
         txt = (
             f"╔════════════════════════════════════╗\n"
-            f"║   🔥 TOOL BACCARAT DỰ ĐOÁN 🔥     ║\n"
-            f"║   ⚡ 60 THUẬT TOÁN SIÊU VIP ⚡    ║\n"
+            f"║   🔥 BACCARAT DỰ ĐOÁN 🔥          ║\n"
+            f"║   ⚡ 60 THUẬT TOÁN FULL ⚡        ║\n"
             f"╚════════════════════════════════════╝\n\n"
             f"🎯 Sảnh: **{engine.current_table}**\n"
-            f"📌 Lịch sử: {len(engine.history)} ván\n"
-            f"📋 Ván gần nhất: {result_emoji(pred['last']) if pred['last'] else 'Chưa có'}\n\n"
+            f"📊 Lịch sử: {len(engine.history)} ván\n"
+            f"📋 Gần nhất: {result_emoji(pred['last']) if pred['last'] else 'Chưa có'}\n"
+            f"📊 Win Rate: {wr}%\n\n"
             f"{'─'*32}\n"
             f"  {winner_emoji} **{winner_name}**\n"
             f"  📊 Độ tin cậy: **{pred['conf']}%**\n"
@@ -1688,10 +1734,9 @@ async def callback(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
             f"🔵 PLAYER {bar(pred['p_pct'])} {pred['p_pct']}%\n"
             f"🔴 BANKER {bar(pred['b_pct'])} {pred['b_pct']}%\n"
             f"⚪ TIE    {bar(pred['t_pct'])} {pred['t_pct']}%\n\n"
-            f"📊 Win Rate: **{engine.wr}%** | Streak: **{engine.stats['streak']}**\n"
-            f"🧠 AI Memory: **{pred['memory_size']}** dự đoán\n"
-            f"⚡ Số Algo: **{pred['algo_count']}**/60\n"
-            f"🕐 {datetime.now().strftime('%H:%M:%S %d/%m/%Y')}"
+            f"📊 Algo: **{pred['algo_count']}**/60\n"
+            f"🧠 Memory: **{pred['memory_size']}**\n"
+            f"🕐 {datetime.now().strftime('%H:%M:%S')}"
         )
 
         await q.edit_message_text(
@@ -1708,23 +1753,18 @@ async def callback(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     # ─── THỐNG KÊ ──────────────────────────────────────────────
     if data == "stats":
         s = engine.stats
-        mem = engine.memory[-20:] if engine.memory else []
-        correct = sum(1 for m in mem if m["predicted"] == m["actual"]) if mem else 0
-        accuracy = round(correct / len(mem) * 100, 1) if mem else 0
+        wr = engine.get_table_wr(engine.current_table) if engine.current_table else 0
         txt = (
-            f"📊 **THỐNG KÊ TOOL BACCARAT**\n\n"
-            f"✅ Thắng   : **{s['win']}**\n"
-            f"❌ Thua    : **{s['loss']}**\n"
-            f"📈 Tổng    : **{s['total']}**\n"
-            f"🎯 Win Rate: **{engine.wr}%**\n"
-            f"⚡ Streak  : **{s['streak']}**\n"
-            f"🏆 Best    : **{s['best']}**\n\n"
-            f"🧠 AI Memory: **{len(engine.memory)}**\n"
-            f"🎯 Accuracy: **{accuracy}%** (20 gần nhất)\n"
-            f"📡 Dữ liệu  : **{len(engine.history)}** phiên\n"
-            f"🤖 Số Algo  : **60**\n"
-            f"🔄 Learned  : **{len(engine._learned_sessions)}**\n"
-            f"🎯 Sảnh     : **{engine.current_table or 'Chưa chọn'}**"
+            f"📊 **THỐNG KÊ**\n\n"
+            f"✅ Thắng: {s['win']}\n"
+            f"❌ Thua: {s['loss']}\n"
+            f"📈 Tổng: {s['total']}\n"
+            f"🎯 Win Rate: {engine.wr}%\n"
+            f"⚡ Streak: {s['streak']}\n"
+            f"🏆 Best: {s['best']}\n\n"
+            f"🧠 Memory: {len(engine.memory)}\n"
+            f"🎯 Sảnh WR: {wr}%\n"
+            f"🎰 Sảnh: {engine.current_table or 'Chưa chọn'}"
         )
         await q.edit_message_text(
             txt,
@@ -1741,7 +1781,7 @@ async def callback(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         pred = engine.predict()
         if not pred:
             await q.edit_message_text(
-                "⏳ Chưa có dữ liệu\nVui lòng chọn sảnh trước.",
+                "⏳ Chưa có dữ liệu",
                 reply_markup=InlineKeyboardMarkup([
                     [InlineKeyboardButton("🏠 HOME", callback_data="home")]
                 ])
@@ -1759,7 +1799,7 @@ async def callback(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
 
         lines.append("\n" + "─" * 28)
         lines.append(f"📊 Ensemble: {pred['winner']} | {pred['conf']}%")
-        lines.append(f"🧠 AI Memory: {pred['memory_size']}")
+        lines.append(f"🧠 Memory: {pred['memory_size']}")
 
         await q.edit_message_text(
             "\n".join(lines),
@@ -1775,7 +1815,7 @@ async def callback(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     if data == "hist":
         if not engine.current_table:
             await q.edit_message_text(
-                "⚠️ Vui lòng chọn sảnh trước\nDùng nút `📋 DANH SÁCH SẢNH`",
+                "⚠️ Chọn sảnh trước!",
                 parse_mode=ParseMode.MARKDOWN,
                 reply_markup=InlineKeyboardMarkup([
                     [InlineKeyboardButton("📋 DANH SÁCH SẢNH", callback_data="tables"),
@@ -1787,7 +1827,7 @@ async def callback(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         hist = engine.history[-15:] if engine.history else []
         if not hist:
             await q.edit_message_text(
-                "⏳ Chưa có lịch sử cho sảnh này",
+                "⏳ Chưa có lịch sử",
                 reply_markup=InlineKeyboardMarkup([
                     [InlineKeyboardButton("🔄 Refresh", callback_data="hist"),
                      InlineKeyboardButton("🏠 HOME", callback_data="home")]
@@ -1814,23 +1854,19 @@ async def callback(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     if data == "account":
         u = db.get_users().get(str(uid))
         if uid in ADMIN_IDS:
-            txt = f"🛡️ **ADMIN**\n\n📛 ID: `{uid}`\n⏰ Hết hạn: ∞"
+            txt = f"🛡️ **ADMIN**\n\nID: `{uid}`\nHết hạn: ∞"
         elif u:
             exp = datetime.fromisoformat(u["expire"])
             days_left = (exp - datetime.now()).days
             txt = (
-                f"✅ **TÀI KHOẢN ACTIVE**\n\n"
-                f"📛 ID: `{uid}`\n"
-                f"🔑 Key: `{u['key']}`\n"
-                f"⏰ Hết hạn: `{exp.strftime('%d/%m/%Y %H:%M')}`\n"
-                f"📅 Còn lại: `{days_left} ngày`"
+                f"✅ **ACTIVE**\n\n"
+                f"ID: `{uid}`\n"
+                f"Key: `{u['key']}`\n"
+                f"Hết hạn: {exp.strftime('%d/%m/%Y %H:%M')}\n"
+                f"Còn: {days_left} ngày"
             )
         else:
-            txt = (
-                f"❌ **CHƯA KÍCH HOẠT**\n\n"
-                f"📛 ID: `{uid}`\n\n"
-                f"Dùng: `/key BAC-XXXXXXXXXX`"
-            )
+            txt = f"❌ **CHƯA KÍCH HOẠT**\n\nID: `{uid}`\n\n/key BAC-XXXX"
         await q.edit_message_text(
             txt,
             parse_mode=ParseMode.MARKDOWN,
@@ -1844,17 +1880,16 @@ async def callback(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     if data == "status":
         tables = db.get_tables()
         txt = (
-            f"⚡ **TOOL BACCARAT STATUS**\n\n"
+            f"⚡ **STATUS**\n\n"
             f"📡 Dữ liệu: {len(engine.history)} ván\n"
-            f"🧠 AI Memory: {len(engine.memory)} dự đoán\n"
-            f"🤖 Thuật toán: 60 active\n"
+            f"🧠 Memory: {len(engine.memory)}\n"
+            f"🤖 Algo: 60 active\n"
             f"📊 Win Rate: {engine.wr}%\n"
             f"⚡ Streak: {engine.stats['streak']}\n"
             f"🔄 Sync: {SYNC_SEC}s\n"
-            f"🎯 Accuracy: {engine.wr}%\n"
             f"🎰 Sảnh: {len(tables)} sảnh\n"
-            f"📋 Sảnh hiện tại: {engine.current_table or 'Chưa chọn'}\n"
-            f"⏰ {datetime.now().strftime('%H:%M:%S %d/%m/%Y')}"
+            f"📋 Hiện tại: {engine.current_table or 'Chưa chọn'}\n"
+            f"⏰ {datetime.now().strftime('%H:%M:%S')}"
         )
         await q.edit_message_text(
             txt,
@@ -1866,50 +1901,42 @@ async def callback(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         )
         return
 
-# ─── DELETE KEY COMMAND ──────────────────────────────────────────
+# ─── DELETE KEY ──────────────────────────────────────────────────
 async def delkey(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     uid = update.effective_user.id
     if uid not in ADMIN_IDS:
-        await update.message.reply_text("❌ Không có quyền admin")
+        await update.message.reply_text("❌ Không có quyền")
         return
-
     if not ctx.args:
-        await update.message.reply_text(
-            "🗑️ **XÓA KEY**\n\nDùng: `/delkey BAC-XXXXXXXXXX`",
-            parse_mode=ParseMode.MARKDOWN
-        )
+        await update.message.reply_text("🗑️ Dùng: `/delkey BAC-XXXXXXXXXX`", parse_mode=ParseMode.MARKDOWN)
         return
-
     key = ctx.args[0].upper()
     result = delete_key_admin(key)
     if "thành công" in result:
         db.log_user_activity(uid, f"Xóa key {key}")
     await update.message.reply_text(result)
 
-# ─── MESSAGE HANDLER ─────────────────────────────────────────────
 async def message(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     txt = update.message.text.strip()
     uid = update.effective_user.id
-
     if txt.upper().startswith("BAC-"):
-        result = activate_key(uid, txt.upper())
-        await update.message.reply_text(result)
+        await update.message.reply_text(activate_key(uid, txt.upper()))
     else:
         await update.message.reply_text(
             "⚡ **TOOL BACCARAT AI**\n\n"
-            "Dùng `/start` để bắt đầu\n"
-            "Dùng `/key BAC-XXXX` để kích hoạt\n"
-            "Admin: `/admin` - `/delkey`\n\n"
-            "📌 Đầu tiên chọn sảnh từ nút `📋 DANH SÁCH SẢNH`",
+            "/start - Menu\n"
+            "/key BAC-XXXX - Kích hoạt\n"
+            "/admin - Admin\n"
+            "/delkey - Xóa key (admin)\n\n"
+            "📌 Chọn sảnh từ 📋 DANH SÁCH SẢNH",
             parse_mode=ParseMode.MARKDOWN
         )
 
 # ═══════════════════════════════════════════════════════════════════
-#  WEB SERVER CHO RENDER
+#  WEB SERVER
 # ═══════════════════════════════════════════════════════════════════
 import http.server
 import socketserver
-
 PORT = int(os.environ.get('PORT', 10000))
 
 class HealthCheckHandler(http.server.SimpleHTTPRequestHandler):
@@ -1917,7 +1944,7 @@ class HealthCheckHandler(http.server.SimpleHTTPRequestHandler):
         self.send_response(200)
         self.send_header('Content-type', 'text/plain; charset=utf-8')
         self.end_headers()
-        self.wfile.write(b"TOOL BACCARAT AI Bot is running!")
+        self.wfile.write(b"TOOL BACCARAT AI v6.0 is running!")
 
     def log_message(self, format, *args):
         pass
@@ -1925,37 +1952,33 @@ class HealthCheckHandler(http.server.SimpleHTTPRequestHandler):
 def run_web_server():
     try:
         with socketserver.TCPServer(("0.0.0.0", PORT), HealthCheckHandler) as httpd:
-            print(f"🌐 Web server đang chạy trên cổng {PORT}")
+            print(f"🌐 Web server chạy cổng {PORT}")
             httpd.serve_forever()
     except Exception as e:
         print(f"⚠️ Lỗi web server: {e}")
 
 # ═══════════════════════════════════════════════════════════════════
-#  MAIN - KHỞI CHẠY
+#  MAIN
 # ═══════════════════════════════════════════════════════════════════
 def main():
     print("═" * 50)
-    print("  🔥 TOOL BACCARAT AI v5.1 🔥")
-    print("  60 THUẬT TOÁN SIÊU VIP")
-    print("  HỖ TRỢ ĐA SẢNH | AI HỌC TỰ ĐỘNG")
-    print("  RENDER OPTIMIZED | HQuanz Studio")
+    print("  🔥 TOOL BACCARAT AI v6.0 🔥")
+    print("  60 THUẬT TOÁN FULL")
+    print("  AI TRAIN THEO SẢNH | LƯU ĐÚNG/SAI")
     print("═" * 50)
 
-    # Khởi động Web Server
     web_thread = threading.Thread(target=run_web_server, daemon=True)
     web_thread.start()
-    print(f"  🌐 Web server thread đã khởi động (port {PORT})")
+    print(f"  🌐 Web server đã khởi động (port {PORT})")
 
-    # Load dữ liệu
     data = fetch_baccarat_data()
     if data:
         engine.update_tables(data)
         print(f"  ✅ Loaded {len(data)} sảnh")
-        print(f"  🧠 AI Memory: {len(engine.memory)}")
+        print(f"  🧠 Memory: {len(engine.memory)}")
         print(f"  📊 Win Rate: {engine.wr}%")
-        print(f"  🤖 Thuật toán: 60/60")
+        print(f"  🤖 Algo: 60/60")
 
-    # Khởi tạo bot
     app = ApplicationBuilder().token(BOT_TOKEN).build()
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("admin", admin))
@@ -1964,7 +1987,7 @@ def main():
     app.add_handler(CallbackQueryHandler(callback))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, message))
 
-    print("  🚀 Bot Telegram đang chạy...")
+    print("  🚀 Bot đang chạy...")
 
     try:
         app.run_polling()
