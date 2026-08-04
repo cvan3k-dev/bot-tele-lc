@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: sunwin-api
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app
+    envVars:
+      - key: API_SUNWIN
+        value: https://sunlaymaynkx.hacksieucap.pro/sunlon123
