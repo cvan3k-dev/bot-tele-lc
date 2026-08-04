@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+
 # ═══════════════════════════════════════════════════════════════════
 #   TOOL BACCARAT AI - ĐA SẢNH SIÊU VIP
 #   Version: 6.0 | 60 THUẬT TOÁN FULL | AI TRAIN THEO SẢNH
