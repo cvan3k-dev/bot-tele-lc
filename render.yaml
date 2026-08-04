@@ -2,8 +2,11 @@ services:
   - type: web
     name: sunwin-api
     runtime: python
-    buildCommand: pip install -r requirements.txt
+    plan: free
+    buildCommand: pip install --upgrade pip && pip install -r requirements.txt
     startCommand: gunicorn app:app
     envVars:
       - key: API_SUNWIN
         value: https://sunlaymaynkx.hacksieucap.pro/sunlon123
+      - key: PYTHON_VERSION
+        value: 3.12.0  # Quan trọng: cố định Python 3.12 thay vì 3.14
